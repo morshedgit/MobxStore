@@ -1,12 +1,11 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeAutoObservable } from "mobx";
 import { IItem } from "../Services/IItem";
-import { Store } from "./Store";
+import { Store } from "../Stores/Store";
 
 
 export class Car implements IItem<Car>{
   id: string;
-  label:string = 'Car'
-  static readonly label: string = "Car";
+  label:"Car" = 'Car'
   liked = false;
   store: Store<Car>;
   constructor(
@@ -19,32 +18,18 @@ export class Car implements IItem<Car>{
     makeAutoObservable(this);
     this.store = store;
     this.id = itemId ?? Math.random().toString(32);
-  }
-
-  factory() {
-    return new Car(this.store);
+    this.createdAt = (new Date()).toUTCString()
   }
 
   async update(brand: string, model: string) {
     this.brand = brand;
     this.model = model;
-    // await this.store.updateItem(this);
-    runInAction(() => {
-      this.brand = brand;
-      this.model = model;
-    });
+    await this.store.updateItem(this);
   }
 
   async like(v: boolean) {
-    try {
-      console.log(v);
       this.liked = v;
-      // await this.store.updateItem(this);
-      console.log("Success");
-    } catch {
-      console.log("error");
-      runInAction(() => (this.liked = !v));
-    }
+      await this.store.updateItem(this);
   }
 
   async delete() {

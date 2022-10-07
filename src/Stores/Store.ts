@@ -1,24 +1,30 @@
 import { makeObservable, observable, runInAction } from "mobx";
-import { Car } from "./Car";
+import { Car } from "../Models/Car";
 import { IService } from "../Services/IService";
 import { LocalService } from "../Services/LocalService";
 import { IItem } from "../Services/IItem";
+import { School } from "../Models/School";
 
 export type TypeConstructor<T> = new (...args: any[]) => T
 
 
-export class Store<T extends IItem<T>> {
+export class Store<T extends IItem<T> & {store?:Store<T>}> {
   items: T[] = [];
   constructor(private factory: TypeConstructor<T>, private storageService: IService<T>) {
     makeObservable(this,{
-      items:observable
+      items:observable.struct
     });
     this.init();
   }
 
   async init() {
     try {
-      const initialItems = await this.storageService.getAll();
+      let initialItems = await this.storageService.getAll();
+      initialItems = initialItems.map(initItem=>{
+        initItem.store = this
+        return initItem
+      })
+
       runInAction(() => {
         this.items = initialItems;
       });
@@ -36,9 +42,7 @@ export class Store<T extends IItem<T>> {
   }
 
   async addItem(args?: unknown[]) {
-    debugger
     const newItem = new this.factory();
-
     await this.storageService.create(newItem);
     runInAction(() => (this.items = [...this.items, newItem]));
   }
@@ -52,13 +56,6 @@ export class Store<T extends IItem<T>> {
 
   async updateItem(item: T) {
     await this.storageService.update(item);
-    const updatedItems = this.items.map((m) => {
-      if (m.id === item.id) {
-        return item;
-      }
-      return m;
-    });
-    runInAction(() => (this.items = updatedItems));
     return item;
   }
 
@@ -66,6 +63,7 @@ export class Store<T extends IItem<T>> {
     return this.items.map((item) => item.id);
   }
 }
-
-const localService = new LocalService(Car, "car");
-export const carStore = new Store<Car>(Car, localService);
+const localCarService = new LocalService(Car);
+export const carStore = new Store<Car>(Car, localCarService);
+const localSchoolService = new LocalService(School);
+export const schoolStore = new Store<School>(School, localSchoolService);

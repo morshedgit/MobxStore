@@ -1,12 +1,12 @@
-import * as React from "react";
 import { observer } from "mobx-react-lite";
-import { Store } from "../Models/Store";
-import { ListItem } from "./ListItem";
-import { IItem } from "../Services/IItem";
+import { Store } from "../Stores/Store";
+import { CarView } from "./CarView";
+import { Car } from "../Models/Car";
+import { School } from "../Models/School";
 
 export const List = observer(
-  <T extends IItem<T>>(props: {
-    store: Store<T>;
+  (props: {
+    store: Store<Car> | Store<School>;
   }) => {
     const handleAddItem = () => {
       props.store.addItem();
@@ -14,7 +14,12 @@ export const List = observer(
     return (
       <ul className="w-full">
         {props.store.items.map((item) => {
-          return <ListItem key={Math.random()} listItem={item} />;
+          switch(item.label){
+            case 'Car':
+              return <CarView key={Math.random()} car={item} />;
+            case 'School':
+              return <p>SchoolView</p>
+          }
         })}
         <button key="newItem" type="button" onClick={handleAddItem}>
           Add

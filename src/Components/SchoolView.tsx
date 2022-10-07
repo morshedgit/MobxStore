@@ -1,49 +1,39 @@
 import * as React from "react";
 import { observer } from "mobx-react-lite";
-import { Car } from "../Models/Car";
-import { IItem } from "../Services/IItem";
+import { School } from "../Models/School";
 
-type ListItemProps<T> = {
-  listItem: T;
+type SchoolViewProps = {
+  school: School;
 };
-export const ListItem = observer(
-  <T extends IItem<T>>(props: ListItemProps<T>) => {
+export const SchoolView = observer(
+  (props: SchoolViewProps) => {
     const [editable, setEditable] = React.useState(false);
-    if (props.listItem.label === "Car") {
-      const listItem = (props.listItem as unknown) as Car;
+      const school = props.school
       const handleSubmitForm:
         | React.FormEventHandler<HTMLFormElement>
         | undefined = (e) => {
         e?.preventDefault();
         const formData = new FormData(e.currentTarget as HTMLFormElement);
         const data = Object.fromEntries(formData.entries());
-        listItem.update(data.brand as string, data.model as string);
+        school.update(data.brand as string, data.model as string);
         setEditable(false);
       };
       return (
         <li className="w-full flex justify-between">
           <section className="flex flex-col">
             <p>
-              {listItem.id}
-              <button
-                type="button"
-                onClick={() => {
-                  listItem.like(!listItem.liked);
-                }}
-              >
-                {listItem.liked ? "♥" : "♡"}
-              </button>
+              created at: {school.createdAt}
             </p>
             {!editable && (
               <>
-                <h3 className="text-xl font-bold">{listItem.brand}</h3>
-                <h3 className="text-xl font-bold">{listItem.model}</h3>
+                <h3 className="text-xl font-bold">{school.name}</h3>
+                <h3 className="text-xl font-bold">{school.info}</h3>
               </>
             )}
             {editable && (
               <form onSubmit={handleSubmitForm}>
-                <input placeholder="brand" type="text" name="brand" />
-                <input placeholder="model" type="text" name="model" />
+                <input placeholder="name" type="text" name="name" />
+                <input placeholder="info" type="text" name="info" />
                 <button
                   className="p-2 border border-solid rounded-lg"
                   type="submit"
@@ -64,7 +54,7 @@ export const ListItem = observer(
             <button
               className="p-2 border border-solid rounded-lg"
               type="button"
-              onClick={() => listItem.delete()}
+              onClick={() => school.delete()}
             >
               Delete
             </button>
@@ -72,10 +62,4 @@ export const ListItem = observer(
         </li>
       );
     }
-    return (
-      <li>
-        <h3 className="text-xl font-bold">{(props.listItem as any).id}</h3>
-      </li>
-    );
-  }
 );
