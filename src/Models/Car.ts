@@ -1,20 +1,16 @@
 import { makeAutoObservable, runInAction } from "mobx";
 import { IItem } from "../Services/IItem";
 import { Store } from "./Store";
-interface ICar {
+
+
+export class Car implements IItem<Car>{
   id: string;
-  brand?: string;
-  model?: string;
-  liked: boolean;
-  createdAt?: string;
-}
-export const Car: IItem<ICar> = class {
-  id: string;
+  label:string = 'Car'
   static readonly label: string = "Car";
   liked = false;
-  store: Store<ICar>;
+  store: Store<Car>;
   constructor(
-    store: Store<ICar>,
+    store: Store<Car>,
     itemId?: string,
     public createdAt?: string,
     public brand?: string,
@@ -25,8 +21,8 @@ export const Car: IItem<ICar> = class {
     this.id = itemId ?? Math.random().toString(32);
   }
 
-  static factory() {
-    return new Car();
+  factory() {
+    return new Car(this.store);
   }
 
   async update(brand: string, model: string) {
@@ -61,7 +57,7 @@ export const Car: IItem<ICar> = class {
     }
   }
 
-  static fromJson(json?: Car) {
+  fromJson(json?: Car) {
     const newCar = new Car(this.store);
     if (!json) {
       return newCar;
@@ -75,7 +71,7 @@ export const Car: IItem<ICar> = class {
     return newCar;
   }
 
-  static toJson() {
+  toJson() {
     return {
       id: this.id,
       label: this.label,

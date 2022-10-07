@@ -1,2 +1,0 @@
-# MobxStore
-Created with CodeSandbox

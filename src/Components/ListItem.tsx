@@ -1,14 +1,15 @@
 import * as React from "react";
 import { observer } from "mobx-react-lite";
 import { Car } from "../Models/Car";
+import { IItem } from "../Services/IItem";
 
 type ListItemProps<T> = {
   listItem: T;
 };
 export const ListItem = observer(
-  <T extends { id: string; type: string }>(props: ListItemProps<T>) => {
-    const [editebale, setEditable] = React.useState(false);
-    if (props.listItem.type === "car") {
+  <T extends IItem<T>>(props: ListItemProps<T>) => {
+    const [editable, setEditable] = React.useState(false);
+    if (props.listItem.label === "Car") {
       const listItem = (props.listItem as unknown) as Car;
       const handleSubmitForm:
         | React.FormEventHandler<HTMLFormElement>
@@ -33,13 +34,13 @@ export const ListItem = observer(
                 {listItem.liked ? "♥" : "♡"}
               </button>
             </p>
-            {!editebale && (
+            {!editable && (
               <>
                 <h3 className="text-xl font-bold">{listItem.brand}</h3>
                 <h3 className="text-xl font-bold">{listItem.model}</h3>
               </>
             )}
-            {editebale && (
+            {editable && (
               <form onSubmit={handleSubmitForm}>
                 <input placeholder="brand" type="text" name="brand" />
                 <input placeholder="model" type="text" name="model" />
@@ -73,7 +74,7 @@ export const ListItem = observer(
     }
     return (
       <li>
-        <h3 className="text-xl font-bold">{props.listItem.id}</h3>
+        <h3 className="text-xl font-bold">{(props.listItem as any).id}</h3>
       </li>
     );
   }

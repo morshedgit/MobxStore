@@ -1,21 +1,18 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import { makeObservable, observable, runInAction } from "mobx";
 import { Car } from "./Car";
 import { IService } from "../Services/IService";
 import { LocalService } from "../Services/LocalService";
 import { IItem } from "../Services/IItem";
 
-// export type AConstructorTypeOf<T> = new (...args: any[]) => T;
+export type TypeConstructor<T> = new (...args: any[]) => T
 
-// export function factory<T extends { id: string }>(
-//   Ctor: AConstructorTypeOf<T>,
-//   ...args: any[]
-// ) {
-//   return new Ctor(...args);
-// }
-export class Store<T> {
+
+export class Store<T extends IItem<T>> {
   items: T[] = [];
-  constructor(private factory: T, private storageService: IService<T>) {
-    makeAutoObservable(this);
+  constructor(private factory: TypeConstructor<T>, private storageService: IService<T>) {
+    makeObservable(this,{
+      items:observable
+    });
     this.init();
   }
 
@@ -39,7 +36,8 @@ export class Store<T> {
   }
 
   async addItem(args?: unknown[]) {
-    const newItem = this.factory.fromJson();
+    debugger
+    const newItem = new this.factory();
 
     await this.storageService.create(newItem);
     runInAction(() => (this.items = [...this.items, newItem]));
@@ -70,4 +68,4 @@ export class Store<T> {
 }
 
 const localService = new LocalService(Car, "car");
-export const carStore = new Store(Car, localService);
+export const carStore = new Store<Car>(Car, localService);

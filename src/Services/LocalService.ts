@@ -1,5 +1,6 @@
 import { IService } from "./IService";
-import { IItem } from "IItem";
+import { IItem } from "./IItem";
+import { TypeConstructor } from "../Models/Store";
 
 function replacer(key: string, value: unknown) {
   if (key === "store") return undefined;
@@ -7,12 +8,14 @@ function replacer(key: string, value: unknown) {
 }
 export class LocalService<T extends IItem<T>> implements IService<T> {
   storeName: string;
+  itemFactory:T
   items: T[] = [];
-  constructor(private factory: T, storeName: string) {
+  constructor(private factory: TypeConstructor<T>, storeName: string) {
     this.storeName = storeName;
+    this.itemFactory = new this.factory()
     this.fetchAll().then((items) => {
       items.map((item) => {
-        const newItem = this.factory.fromJson(item);
+        const newItem = this.itemFactory.fromJson(item);
         this.items.push(newItem);
       });
     });
