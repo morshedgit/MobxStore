@@ -1,6 +1,7 @@
 import * as React from "react";
 import { observer } from "mobx-react-lite";
 import { Car } from "../Models/Car";
+import { IItem } from "../Services/IItem";
 
 type ListItemProps<T> = {
   listItem: T;
@@ -9,7 +10,7 @@ export const ListItem = observer(
   <T extends { id: string; type: string }>(props: ListItemProps<T>) => {
     const [editebale, setEditable] = React.useState(false);
     if (props.listItem.type === "car") {
-      const listItem = (props.listItem as unknown) as Car;
+      const listItem = props.listItem as unknown as typeof Car;
       const handleSubmitForm:
         | React.FormEventHandler<HTMLFormElement>
         | undefined = (e) => {
