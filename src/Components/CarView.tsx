@@ -1,6 +1,7 @@
 import * as React from "react";
 import { observer } from "mobx-react-lite";
 import { Car } from "../Models/Car";
+import { NavLink } from "react-router-dom";
 
 type CarViewProps = {
   car: Car;
@@ -19,7 +20,7 @@ export const CarView = observer(
         setEditable(false);
       };
       return (
-        <li className="w-full flex justify-between">
+        <NavLink to={`${car.id}`} className="w-full flex justify-between">
           <section className="flex flex-col">
             <p>
               created at: {car.createdAt}
@@ -32,24 +33,6 @@ export const CarView = observer(
                 {car.liked ? "♥" : "♡"}
               </button>
             </p>
-            {!editable && (
-              <>
-                <h3 className="text-xl font-bold">{car.brand}</h3>
-                <h3 className="text-xl font-bold">{car.model}</h3>
-              </>
-            )}
-            {editable && (
-              <form onSubmit={handleSubmitForm}>
-                <input placeholder="brand" type="text" name="brand" />
-                <input placeholder="model" type="text" name="model" />
-                <button
-                  className="p-2 border border-solid rounded-lg"
-                  type="submit"
-                >
-                  Save
-                </button>
-              </form>
-            )}
           </section>
           <section>
             <button
@@ -67,7 +50,7 @@ export const CarView = observer(
               Delete
             </button>
           </section>
-        </li>
+        </NavLink>
       );
     }
 );

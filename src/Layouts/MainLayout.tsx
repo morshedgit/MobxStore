@@ -8,13 +8,13 @@ export const MainLayout = ()=>{
       <nav>
         <ul className='flex flex-col'>
           <li>
-            <Link to="/">Home</Link>
+            <NavLink to="/" className={({isActive})=>isActive?'underline':''} end>Home</NavLink>
           </li>
           <li>
-            <Link to="/cars">Cars</Link>
+            <NavLink to="/cars" className={({isActive})=>isActive?'underline':''}>Cars</NavLink>
           </li>
           <li>
-            <Link to="/schools">Schools</Link>
+            <NavLink to="/schools" className={({isActive})=>isActive?'underline':''}>Schools</NavLink>
           </li>
         </ul>
       </nav>
