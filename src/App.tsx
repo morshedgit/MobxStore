@@ -1,10 +1,19 @@
 import "./App.css";
 import React from "react";
-import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
-import { List } from "./Components/List";
-import { carStore, schoolStore } from "./Stores/Store";
+import {
+  createBrowserRouter,
+  redirect,
+  RouterProvider,
+} from "react-router-dom";
+
+import { carStore } from "./Stores/Store";
 import { MainLayout } from "./Layouts/MainLayout";
-import { CarDetail } from "./Pages/CarDetail";
+import { CarDetail } from "./Pages/Car/CarDetail";
+import { CarsPage } from "./Pages/Car/CarsPage";
+import { AuthLayout } from "./Layouts/AuthLayout";
+import { Login } from "./Pages/Auth/Login";
+import { ForgetPassword } from "./Pages/Auth/Forgetpassword";
+import { Signup } from "./Pages/Auth/Signup";
 
 const router = createBrowserRouter([
   {
@@ -18,15 +27,7 @@ const router = createBrowserRouter([
       },
       {
         path: "cars",
-        element: (
-          <section className="flex gap-x-4">
-            <div className="flex-grow flex-shrink">
-              <h2 className="text-2xl">Cars Page</h2>
-              <List store={carStore} />
-            </div>
-            <Outlet />
-          </section>
-        ),
+        element: <CarsPage store={carStore} />,
         children: [
           {
             errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
@@ -42,10 +43,28 @@ const router = createBrowserRouter([
             ],
           },
         ],
+        loader: () => {
+          return redirect(`/auth/login`);
+        },
+      },
+    ],
+  },
+  {
+    path: "/auth",
+    element: <AuthLayout />,
+    errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+    children: [
+      {
+        path: "login",
+        element: <Login />,
       },
       {
-        path: "schools",
-        element: <List store={schoolStore} />,
+        path: "forget-password",
+        element: <ForgetPassword />,
+      },
+      {
+        path: "signup",
+        element: <Signup />,
       },
     ],
   },
