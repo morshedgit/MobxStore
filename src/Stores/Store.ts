@@ -5,14 +5,16 @@ import { LocalService } from "../Services/LocalService";
 import { IItem } from "../Services/IItem";
 import { School } from "../Models/School";
 
-export type TypeConstructor<T> = new (...args: any[]) => T
+export type TypeConstructor<T> = new (...args: any[]) => T;
 
-
-export class Store<T extends IItem<T> & {store?:Store<T>}> {
+export class Store<T extends IItem<T> & { store?: Store<T> }> {
   items: T[] = [];
-  constructor(private factory: TypeConstructor<T>, private storageService: IService<T>) {
-    makeObservable(this,{
-      items:observable.struct
+  constructor(
+    private factory: TypeConstructor<T>,
+    private storageService: IService<T>
+  ) {
+    makeObservable(this, {
+      items: observable.struct,
     });
     this.init();
   }
@@ -20,10 +22,10 @@ export class Store<T extends IItem<T> & {store?:Store<T>}> {
   async init() {
     try {
       let initialItems = await this.storageService.getAll();
-      initialItems = initialItems.map(initItem=>{
-        initItem.store = this
-        return initItem
-      })
+      initialItems = initialItems.map((initItem) => {
+        initItem.store = this;
+        return initItem;
+      });
 
       runInAction(() => {
         this.items = initialItems;
@@ -45,6 +47,7 @@ export class Store<T extends IItem<T> & {store?:Store<T>}> {
     const newItem = new this.factory();
     await this.storageService.create(newItem);
     runInAction(() => (this.items = [...this.items, newItem]));
+    return newItem;
   }
 
   async deleteItem(item: T) {
