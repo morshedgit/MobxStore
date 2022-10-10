@@ -3,7 +3,6 @@ import { Car } from "../Models/Car";
 import { IService } from "../Services/IService";
 import { LocalService } from "../Services/LocalService";
 import { IItem } from "../Services/IItem";
-import { School } from "../Models/School";
 
 export type TypeConstructor<T> = new (...args: any[]) => T;
 
@@ -43,8 +42,8 @@ export class Store<T extends IItem<T> & { store?: Store<T> }> {
     return this.storageService.read(id);
   }
 
-  async addItem(args?: unknown[]) {
-    const newItem = new this.factory();
+  async addItem(...args: unknown[]) {
+    const newItem = new this.factory(...args);
     await this.storageService.create(newItem);
     runInAction(() => (this.items = [...this.items, newItem]));
     return newItem;
@@ -68,5 +67,3 @@ export class Store<T extends IItem<T> & { store?: Store<T> }> {
 }
 const localCarService = new LocalService(Car);
 export const carStore = new Store<Car>(Car, localCarService);
-const localSchoolService = new LocalService(School);
-export const schoolStore = new Store<School>(School, localSchoolService);

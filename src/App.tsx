@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 
 import { carStore } from "./Stores/Store";
+import { currentUser } from "./Models/User";
 import { MainLayout } from "./Layouts/MainLayout";
 import { CarDetail } from "./Pages/Car/CarDetail";
 import { CarsPage } from "./Pages/Car/CarsPage";
@@ -44,7 +45,9 @@ const router = createBrowserRouter([
           },
         ],
         loader: () => {
-          return redirect(`/auth/login`);
+          if (!currentUser.isAuthorized) {
+            return redirect(`/auth/login?returnUrl=/cars`);
+          }
         },
       },
     ],
@@ -57,6 +60,20 @@ const router = createBrowserRouter([
       {
         path: "login",
         element: <Login />,
+        action: async ({ request }) => {
+          debugger;
+          const formData = await request.formData();
+          const { username, password } = Object.fromEntries(formData) as {
+            username: string;
+            password: string;
+          };
+
+          if (username && password) {
+            await currentUser.login({ username, password });
+            return redirect(`/cars`);
+          }
+          return;
+        },
       },
       {
         path: "forget-password",
@@ -65,6 +82,19 @@ const router = createBrowserRouter([
       {
         path: "signup",
         element: <Signup />,
+        action: async ({ request }) => {
+          const formData = await request.formData();
+          const { username, password } = Object.fromEntries(formData) as {
+            username: string;
+            password: string;
+          };
+
+          if (username && password) {
+            await currentUser.signup({ username, password });
+            return redirect(`/auth/login`);
+          }
+          return;
+        },
       },
     ],
   },

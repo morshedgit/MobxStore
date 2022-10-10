@@ -8,10 +8,10 @@ function replacer(key: string, value: unknown) {
 }
 export class LocalService<T extends IItem<T>> implements IService<T> {
   storeName: string;
-  itemFactory:T
+  itemFactory: T;
   items: T[] = [];
   constructor(private factory: TypeConstructor<T>) {
-    this.itemFactory = new this.factory()
+    this.itemFactory = new this.factory();
     this.storeName = this.itemFactory.label;
     this.fetchAll().then((items) => {
       items.map((item) => {
