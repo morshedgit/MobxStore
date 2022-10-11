@@ -45,7 +45,7 @@ const router = createBrowserRouter([
           },
         ],
         loader: () => {
-          if (!currentUser.isAuthorized) {
+          if (!currentUser.authenticated) {
             return redirect(`/auth/login?returnUrl=/cars`);
           }
         },
@@ -58,10 +58,19 @@ const router = createBrowserRouter([
     errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
     children: [
       {
+        path: "logout",
+        action: async () => {
+          const returnUrl = window.location.pathname;
+          await currentUser.logout();
+          return redirect(
+            `/auth/login/${returnUrl ? "?&returnUrl=" + returnUrl : ""}`
+          );
+        },
+      },
+      {
         path: "login",
         element: <Login />,
         action: async ({ request }) => {
-          debugger;
           const formData = await request.formData();
           const { username, password } = Object.fromEntries(formData) as {
             username: string;
@@ -69,8 +78,16 @@ const router = createBrowserRouter([
           };
 
           if (username && password) {
-            await currentUser.login({ username, password });
-            return redirect(`/cars`);
+            try {
+              await currentUser.login({ username, password });
+              const urlSearchParams = new URLSearchParams(request.url);
+              const returnUrl = urlSearchParams.get("returnUrl");
+              debugger;
+              const redirectPath = `${returnUrl ?? ""}`;
+              return redirect(redirectPath);
+            } catch (e: any) {
+              alert(e.message);
+            }
           }
           return;
         },
@@ -97,6 +114,14 @@ const router = createBrowserRouter([
         },
       },
     ],
+    loader: ({ request }) => {
+      const urlSearchParams = new URLSearchParams(request.url);
+      const returnUrl = urlSearchParams.get("returnUrl");
+      if (currentUser.authenticated) {
+        if (!returnUrl) return redirect("/");
+        return redirect(`/${returnUrl}`);
+      }
+    },
   },
 ]);
 function App() {

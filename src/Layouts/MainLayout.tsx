@@ -1,7 +1,8 @@
+import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { Header } from "./Header";
-export const MainLayout = () => {
+export const MainLayout = observer(() => {
   const [open, setOpen] = useState(false);
   return (
     <div className={`w-screen h-screen flex flex-col`}>
@@ -11,7 +12,7 @@ export const MainLayout = () => {
           className={`border p-2 bg-slate-300 text-slate-600 text-lg relative ${
             open ? "w-[10rem]" : "w-[4rem]"
           }
-        } transition-[width]`}
+          } transition-[width]`}
         >
           <nav>
             <ul className={`flex flex-col ${open ? "" : "items-center"}`}>
@@ -65,4 +66,4 @@ export const MainLayout = () => {
       </div>
     </div>
   );
-};
+});

@@ -1,24 +1,42 @@
-import { makeAutoObservable } from "mobx";
-import { AuthService, IAuthService, IConsumer } from "../Services/AuthService";
+import { makeObservable, observable, runInAction } from "mobx";
+import {
+  AuthService,
+  IAuthService,
+  IConsumer,
+  // TestAuthService,
+} from "../Services/AuthService";
 
 export class User implements IConsumer<User> {
   id: string;
   label: "User" = "User";
-  isAuthorized = false;
+  authenticated = false;
   constructor(
     public service: IAuthService<User>,
+    initialLoading: boolean = false,
     itemId?: string,
     public createdAt?: string,
     public username?: string,
     public password?: string
   ) {
-    makeAutoObservable(this);
+    makeObservable(this, {
+      username: observable,
+      authenticated: observable,
+      id: observable,
+    });
     this.id = itemId ?? Math.random().toString(32);
     this.createdAt = new Date().toUTCString();
+    if (initialLoading) {
+      this.service.isAuthenticated(this).then((authenticatedUser) => {
+        runInAction(() => {
+          this.username = authenticatedUser.username;
+          this.authenticated = true;
+          this.id = authenticatedUser.id;
+        });
+      });
+    }
   }
 
   async signup(credentials: { username: string; password: string }) {
-    debugger;
     this.username = credentials.username;
     this.password = credentials.password;
     const res = await this.service.create(this);
@@ -52,7 +70,7 @@ export class User implements IConsumer<User> {
     }
     newUser.id = json.id;
     newUser.label = json.label;
-    newUser.isAuthorized = json.isAuthorized;
+    newUser.authenticated = json.isAuthorized;
     newUser.username = json.username;
     newUser.password = json.password;
     newUser.createdAt = json.createdAt;
@@ -63,7 +81,7 @@ export class User implements IConsumer<User> {
     return {
       id: this.id,
       label: this.label,
-      isAuthorized: this.isAuthorized,
+      isAuthenticated: this.authenticated,
       username: this.username,
       password: this.password,
       createdAt: this.createdAt,
@@ -71,21 +89,29 @@ export class User implements IConsumer<User> {
   }
 
   async login(credentials: { username: string; password: string }) {
-    debugger;
-    const res = await this.service.login(this, credentials);
-    if (!res) {
+    const userId = await this.service.login(this, credentials);
+    if (!userId) {
       throw Error("User Not Found");
     }
-    this.username = credentials.username;
-    this.isAuthorized = true;
+    runInAction(() => {
+      this.id = userId;
+      this.username = credentials.username;
+      this.authenticated = true;
+    });
   }
 
   async logout() {
     const res = await this.service.logout(this);
     if (!res) throw Error("User Not Found");
-    this.username = undefined;
-    this.isAuthorized = false;
+    runInAction(() => {
+      this.username = undefined;
+      this.authenticated = false;
+    });
+  }
+
+  async find(userId: string) {
+    return this.service.findById(userId);
   }
 }
 
-export const currentUser = new User(new AuthService());
+export const currentUser = new User(new AuthService(), true);

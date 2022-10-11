@@ -1,6 +1,6 @@
 export interface IItem<T> {
-  fromJson: (item?: T) => T;
+  fromJson: (item?: T) => Promise<T>;
   toJson: () => unknown;
-  id:string
+  id: string;
   label: string;
 }

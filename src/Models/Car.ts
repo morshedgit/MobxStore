@@ -1,15 +1,16 @@
 import { makeAutoObservable } from "mobx";
 import { IItem } from "../Services/IItem";
 import { Store } from "../Stores/Store";
+import { User } from "./User";
 
-
-export class Car implements IItem<Car>{
+export class Car implements IItem<Car> {
   id: string;
-  label:"Car" = 'Car'
+  label: "Car" = "Car";
   liked = false;
   store: Store<Car>;
   constructor(
     store: Store<Car>,
+    public author: User,
     itemId?: string,
     public createdAt?: string,
     public brand?: string,
@@ -17,8 +18,8 @@ export class Car implements IItem<Car>{
   ) {
     makeAutoObservable(this);
     this.store = store;
-    this.id = itemId ?? Math.random().toString(32);
-    this.createdAt = (new Date()).toUTCString()
+    this.id = itemId ?? Math.random().toString(32).slice(2);
+    this.createdAt = new Date().toUTCString();
   }
 
   async update(brand: string, model: string) {
@@ -28,8 +29,8 @@ export class Car implements IItem<Car>{
   }
 
   async like(v: boolean) {
-      this.liked = v;
-      await this.store.updateItem(this);
+    this.liked = v;
+    await this.store.updateItem(this);
   }
 
   async delete() {
@@ -42,8 +43,8 @@ export class Car implements IItem<Car>{
     }
   }
 
-  fromJson(json?: Car) {
-    const newCar = new Car(this.store);
+  async fromJson(json?: any) {
+    const newCar = new Car(this.store, this.author);
     if (!json) {
       return newCar;
     }
@@ -53,6 +54,7 @@ export class Car implements IItem<Car>{
     newCar.brand = json.brand;
     newCar.model = json.model;
     newCar.createdAt = json.createdAt;
+    newCar.author = (await this.author.find(json.authorId)) ?? this.author;
     return newCar;
   }
 
@@ -63,7 +65,8 @@ export class Car implements IItem<Car>{
       liked: this.liked,
       brand: this.brand,
       model: this.model,
-      createdAt: this.createdAt
+      createdAt: this.createdAt,
+      authorId: this.author?.id,
     };
   }
-};
+}
