@@ -1,12 +1,12 @@
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import { Link, useLoaderData } from "react-router-dom";
-import { Car } from "../../Models/Car";
+import { Category } from "../../Models/Ad";
 
-export const CarDetail = observer(() => {
+export const CategoryDetail = observer(() => {
   const [editable, setEditable] = useState(false);
 
-  const car: Car = useLoaderData() as Car;
+  const category: Category = useLoaderData() as Category;
 
   const handleSubmitForm:
     | React.FormEventHandler<HTMLFormElement>
@@ -14,25 +14,16 @@ export const CarDetail = observer(() => {
     e?.preventDefault();
     const formData = new FormData(e.currentTarget as HTMLFormElement);
     const data = Object.fromEntries(formData.entries());
-    car.update(data.brand as string, data.model as string);
+    debugger;
+    category.update(data.catTitle as string);
     setEditable(false);
   };
   return (
     <section className="w-full md:min-w-[600px] md:w-[80%]">
       <div className="flex justify-between  w-full border-b-2 border-sky-200">
         <h2 className="text-2xl">
-          <Link to="/cars">Cars</Link>/{" "}
-          <Link to={`/cars/${car.id}`}>
-            {car.brand || car.model ? `${car.brand} ${car.model}` : car.id}
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              car.like(!car.liked);
-            }}
-          >
-            {car.liked ? "♥" : "♡"}
-          </button>
+          <Link to="/admin/categories">Categorys</Link>/{" "}
+          <Link to={`/admin/categories/${category.id}`}>{category.title}</Link>
         </h2>
 
         {!editable && (
@@ -57,15 +48,18 @@ export const CarDetail = observer(() => {
 
       {!editable && (
         <>
-          <h3 className="text-xl font-bold">{car.brand}</h3>
-          <h3 className="text-xl font-bold">{car.model}</h3>
+          <h3 className="text-xl font-bold">{category.title}</h3>
         </>
       )}
       {editable && (
-        <form onSubmit={handleSubmitForm} className="p-4">
-          <input placeholder="brand" type="text" name="brand" />
-          <input placeholder="model" type="text" name="model" />
-          <button className="p-2 border border-solid rounded-lg" type="submit">
+        <form onSubmit={handleSubmitForm} className="flex gap-2 p-4">
+          <input
+            className="form-input"
+            placeholder="title"
+            type="text"
+            name="catTitle"
+          />
+          <button className="btn-primary" type="submit">
             Save
           </button>
         </form>

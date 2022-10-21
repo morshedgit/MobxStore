@@ -5,7 +5,7 @@ import { Car } from "../Models/Car";
 import { School } from "../Models/School";
 import { useNavigate } from "react-router-dom";
 
-export const List = observer((props: { store: Store<Car> | Store<School> }) => {
+export const List = observer((props: { store: Store<Car> }) => {
   const navigate = useNavigate();
   const handleAddItem = async () => {
     const item = await props.store.addItem();
@@ -17,8 +17,6 @@ export const List = observer((props: { store: Store<Car> | Store<School> }) => {
         switch (item.label) {
           case "Car":
             return <CarRow key={Math.random()} car={item} />;
-          case "School":
-            return <p>SchoolView</p>;
         }
       })}
       <button

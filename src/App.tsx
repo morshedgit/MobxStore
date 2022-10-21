@@ -6,15 +6,17 @@ import {
   RouterProvider,
 } from "react-router-dom";
 
-import { carStore } from "./Stores/Store";
 import { currentUser } from "./Models/User";
 import { MainLayout } from "./Layouts/MainLayout";
-import { CarDetail } from "./Pages/Car/CarDetail";
-import { CarsPage } from "./Pages/Car/CarsPage";
+import { AdminLayout } from "./Layouts/AdminLayout";
 import { AuthLayout } from "./Layouts/AuthLayout";
 import { Login } from "./Pages/Auth/Login";
 import { ForgetPassword } from "./Pages/Auth/Forgetpassword";
 import { Signup } from "./Pages/Auth/Signup";
+import { CategoriesPage } from "./Pages/Category/CategoriesPage";
+import { Category, categoryStore } from "./Models/Ad";
+import { CategoryDetail } from "./Pages/Category/CategoryDetail";
+import { ERROR_CODES } from "./Models/Common";
 
 const router = createBrowserRouter([
   {
@@ -26,28 +28,52 @@ const router = createBrowserRouter([
         index: true,
         element: <h2 className="text-2xl">Home Page</h2>,
       },
+    ],
+  },
+  {
+    path: "admin",
+    element: <AdminLayout />,
+    errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+    children: [
       {
-        path: "cars",
-        element: <CarsPage store={carStore} />,
+        index: true,
+        element: <h2 className="text-2xl">Home Page</h2>,
+      },
+      {
+        path: "categories",
+        element: <CategoriesPage store={categoryStore} />,
         children: [
           {
             errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
             children: [
               {
-                path: "/cars/:id",
-                element: <CarDetail />,
-                loader: ({ params }) => {
-                  if (!params.id) throw Error("Param Not Found");
-                  return carStore.getItem(params.id);
+                path: "/admin/categories/:id",
+                element: <CategoryDetail />,
+                loader: async ({ params }) => {
+                  debugger;
+                  if (!params.id) throw Error(ERROR_CODES.Param_Not_Found);
+                  const result = await categoryStore.getItem(params.id);
+                  result.store = categoryStore;
+                  return result;
                 },
               },
             ],
           },
         ],
-        loader: () => {
-          if (!currentUser.authenticated) {
-            return redirect(`/auth/login?returnUrl=/cars`);
-          }
+        // loader: () => {
+        //   if (!currentUser.authenticated) {
+        //     return redirect(`/auth/login?returnUrl=/cars`);
+        //   }
+        // },
+        action: async ({ request }) => {
+          const formData = await request.formData();
+          const { catTitle } = Object.fromEntries(formData) as {
+            catTitle: string;
+          };
+          const newCategory = new Category();
+          newCategory.title = catTitle;
+          await categoryStore.createItem(newCategory);
+          return;
         },
       },
     ],
