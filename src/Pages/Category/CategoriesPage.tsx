@@ -1,50 +1,68 @@
-import { Form, Link, NavLink, Outlet, useParams } from "react-router-dom";
+import { observer } from "mobx-react-lite";
+import {
+  Form,
+  Link,
+  NavLink,
+  Outlet,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { Category } from "../../Models/Ad";
 import { Store } from "../../Models/Common";
+import { format } from "date-fns";
 
-export const CategoriesPage = ({ store }: { store: Store<Category> }) => {
-  const { id } = useParams();
-  return (
-    <section className="flex gap-x-4">
-      <div className={`flex-grow flex-col ${id ? "hidden" : "flex"} md:flex`}>
-        <h2 className="text-2xl w-full border-b-2 border-sky-200">
-          <Link to="categories">Categories</Link>
-        </h2>
+export const CategoriesPage = observer(
+  ({ store }: { store: Store<Category> }) => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    return (
+      <section className="flex gap-x-4">
+        <div className={`flex-grow flex-col ${id ? "hidden" : "flex"} md:flex`}>
+          <h2 className="text-2xl w-full border-b-2 border-sky-200 flex items-center justify-between">
+            <Link to="/admin/categories">Categories</Link>
+            <Link to="/admin/categories/new">
+              <span className="material-symbols-outlined">add</span>
+            </Link>
+          </h2>
 
-        <ul className="w-full">
-          {store.items.map((item) => (
-            <li key={item.id}>
-              <NavLink
-                to={`${item.id}`}
-                className="w-full flex justify-between"
-              >
-                <div>
-                  <div className="flex gap-x-2">
-                    <h3 className="text-xl font-bold">{item.title}</h3>
+          <ul className="w-full flex flex-col gap-y-4">
+            {store.items.map((item) => (
+              <li key={item.id}>
+                <NavLink
+                  to={`${item.id}`}
+                  className="w-full flex justify-between p-2 rounded-md shadow-sm shadow-gray-400"
+                >
+                  <div>
+                    <small className="flex items-center gap-x-2">
+                      {" "}
+                      <span className="material-symbols-outlined text-sm">
+                        auto_fix_high
+                      </span>
+                      <i>{format(new Date(item.createdAt), "MMMM dd, yyyy")}</i>
+                    </small>
+                    <div className="flex gap-x-2">
+                      <h3 className="text-xl font-bold">{item.title}</h3>
+                    </div>
                   </div>
-                  <small>Created at: {item.createdAt}</small>
-                </div>
-              </NavLink>
-            </li>
-          ))}
-          <Form method="post" className="flex flex-col gap-2">
-            <fieldset>
-              <label htmlFor="catTitle">Title</label>
-              <input
-                type="text"
-                id="catTitle"
-                defaultValue={undefined}
-                name="catTitle"
-                className="form-input"
-              />
-            </fieldset>
-            <button key="newItem" type="submit" className="btn-primary">
-              Add
-            </button>
-          </Form>
-        </ul>
-      </div>
-      <Outlet />
-    </section>
-  );
-};
+
+                  <button
+                    type="button"
+                    className="hover:text-red-500"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      await store.deleteItem(item);
+                      navigate("/admin/categories");
+                    }}
+                  >
+                    <span className="material-symbols-outlined">delete</span>
+                  </button>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <Outlet />
+      </section>
+    );
+  }
+);

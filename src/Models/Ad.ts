@@ -3,19 +3,26 @@ import { ERROR_CODES, IStore, MainService, Store } from "./Common";
 import { Consumer } from "./Common";
 export class Category extends Consumer {
   title?: string = undefined;
+  description?: string = undefined;
   label = "Category";
   constructor(public store?: IStore<Category>) {
     super();
-    makeObservable(this, {
-      title: observable,
-    });
+    // makeObservable(this, {
+    //   title: observable,
+    // });
   }
-  async update(title: string) {
+  async update({ title, description }: { title: string; description: string }) {
     const tempTitle = this.title;
+    const tempDesc = this.description;
     this.title = title;
+    this.description = description;
+
     if (!this.store) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
     const result = await this.store.updateItem(this);
-    if (!result) this.title = tempTitle;
+    if (!result) {
+      this.title = tempTitle;
+      this.description = tempDesc;
+    }
   }
   async fromJson(json: any) {
     const c = new Category();
@@ -23,6 +30,7 @@ export class Category extends Consumer {
     c.createdAt = json.createdAt;
     c.updatedAt = json.updatedAt;
     c.title = json.title;
+    c.description = json.description;
     return c;
   }
   toJson(consumer: Category) {
@@ -31,6 +39,7 @@ export class Category extends Consumer {
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
       title: consumer.title,
+      description: consumer.description,
     };
   }
 }

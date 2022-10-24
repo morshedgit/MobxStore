@@ -1,8 +1,25 @@
-import { makeAutoObservable, makeObservable, observable } from "mobx";
+import { makeObservable, observable } from "mobx";
 
-export class UUID {
+export class Common {
   static generateID() {
     return Math.random().toString(32).slice(2);
+  }
+  static wait(isReady: () => boolean, t?: number) {
+    return new Promise(async (res, rej) => {
+      const rejectTimeout = setTimeout(() => {
+        if (!isReady()) {
+          clearInterval(resInterval);
+          rej(ERROR_CODES.SERVICE_ERROR);
+        }
+      }, t ?? 3000);
+      const resInterval = setInterval(async () => {
+        if (isReady()) {
+          clearTimeout(rejectTimeout);
+          clearInterval(resInterval);
+          res(true);
+        }
+      }, 50);
+    });
   }
 }
 
@@ -17,6 +34,7 @@ export interface IConsumer<T extends IConsumer<T>> {
 
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
+  authenticated: boolean;
   service?: IService<T>;
   login(credentials: { username: string; password: string }): Promise<T>;
   findUserById(id: string): Promise<T>;
@@ -30,6 +48,7 @@ export interface IService<T extends IConsumer<T>> {
   readAll(ids?: string[]): Promise<T[]>;
   update(item: T): Promise<boolean>;
   delete(item: T): Promise<boolean>;
+  find(query: { key: string; value: any }[]): Promise<T | undefined>;
 }
 
 export interface IStore<T extends IConsumer<T>> {
@@ -82,6 +101,19 @@ export class MainService<T extends IConsumer<T>> implements IService<T> {
     await localStorage.setItem(item.label, JSON.stringify(this.items));
     return true;
   }
+  async find(query: { key: string; value: any }[]) {
+    const result = this.items.find((cur) => {
+      return query
+        .map(({ key, value }) => {
+          if (cur[key] !== value) {
+            return false;
+          }
+          return true;
+        })
+        .every((c) => c);
+    });
+    return result;
+  }
 }
 
 export enum ERROR_CODES {
@@ -89,18 +121,24 @@ export enum ERROR_CODES {
   SERVICE_NOT_AVAILABLE = "SERVICE_NOT_AVAILABLE",
   NOT_FOUND = "NOT_FOUND",
   Param_Not_Found = "Param_Not_Found",
+  NOT_IMPLEMENTED = "NOT_IMPLEMENTED",
 }
 
 export class Store<T extends IConsumer<T>> implements IStore<T> {
   items: T[] = [];
+  isReady = false;
   constructor(private service: IService<T>) {
     makeObservable(this, {
-      items: observable,
+      items: observable.struct,
     });
-    this.getItems().then((items) => (this.items = items));
+    this.service.readAll().then((items) => {
+      this.items = items;
+      this.isReady = true;
+    });
   }
-  getItems(): Promise<T[]> {
-    return this.service.readAll();
+  async getItems(t?: number): Promise<T[]> {
+    await Common.wait(() => this.isReady);
+    return this.items;
   }
   createItem(item: T): Promise<boolean> {
     const result = this.service.create(item);
@@ -111,23 +149,18 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
   deleteItem(item: T): Promise<boolean> {
     const result = this.service.delete(item);
     if (!result) throw Error("SERVICE_ERROR");
-    this.items.filter((cur) => cur.id !== item.id);
+    this.items = this.items.filter((cur) => cur.id !== item.id);
     return result;
   }
   updateItem(item: T): Promise<boolean> {
     const result = this.service.update(item);
     if (!result) throw Error("SERVICE_ERROR");
-    this.items.map((cur) => {
-      if (cur.id === item.id) {
-        return item;
-      }
-      return cur;
-    });
     return result;
   }
   async getItem(id: string): Promise<T> {
+    await Common.wait(() => this.isReady);
     const foundItem = this.items.find((cur) => cur.id === id);
-    if (!foundItem) throw Error("NOT_FOUND");
+    if (!foundItem) throw Error(ERROR_CODES.NOT_FOUND);
     return foundItem;
   }
 }
@@ -136,52 +169,97 @@ export class User implements IUser<User> {
   id: string = "";
   label: string = "User";
   username: string = "";
+  password?: string = "";
+  authenticated = false;
   createdAt: string = "";
   updatedAt: string = "";
   service?: IService<User>;
   constructor(authService?: IService<User>) {
     this.service = authService;
-    this.id = UUID.generateID();
+    this.id = Common.generateID();
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
+    makeObservable(this, {
+      username: observable,
+      authenticated: observable,
+    });
+    this.isLogged();
+  }
+  async isLogged() {
+    const id = localStorage.getItem("loggedUserId");
+    if (!id) {
+      return;
+    }
+    const user = await this.findUserById(id);
+    if (!user) {
+      return;
+    }
+    this.authenticated = true;
+    this.username = user.username;
+    this.id = user.id;
+    this.createdAt = user.createdAt;
   }
   async findUserById(id: string): Promise<User> {
-    if (!this.service) throw Error("NOT_IMPLEMENTED");
+    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
     return this.service.read(id);
   }
   async login(credentials: {
     username: string;
     password: string;
   }): Promise<User> {
-    if (!this.service) throw Error("NOT_IMPLEMENTED");
-    // return this.authService.read(id,'User')
-    return new User(this.service);
+    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    const user = await this.service.find([
+      {
+        key: "username",
+        value: credentials.username,
+      },
+      {
+        key: "password",
+        value: credentials.password,
+      },
+    ]);
+    if (!user) {
+      throw Error(ERROR_CODES.NOT_FOUND);
+    }
+    this.authenticated = true;
+    this.username = user.username;
+    this.id = user.id;
+    this.createdAt = user.createdAt;
+    await this.service.update(this);
+    localStorage.setItem("loggedUserId", this.id);
+    return this;
   }
 
   async logout(): Promise<boolean> {
-    if (!this.service) throw Error("NOT_IMPLEMENTED");
-    // return this.authService.read(id,'User')
+    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    this.authenticated = false;
+    await this.service.update(this);
+    localStorage.setItem("loggedUserId", "");
     return true;
   }
   async signup(credentials: {
     username: string;
     password: string;
   }): Promise<boolean> {
-    if (!this.service) throw Error("NOT_IMPLEMENTED");
-    // return this.authService.read(id,'User')
+    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    const newUser = new User();
+    newUser.username = credentials.username;
+    await this.service.create(newUser);
     return true;
   }
   async fromJson(json: any): Promise<User> {
-    const author = new User(this.service);
-    // author.username = json.username
-    // author.id = json.id
-    return author;
+    const user = new User(this.service);
+    user.username = json.username;
+    user.id = json.id;
+    user.authenticated = json.authenticated;
+    return user;
   }
   toJson(consumer: User): any {
     return {
       id: consumer.id,
       label: consumer.label,
       username: consumer.username,
+      authenticated: consumer.authenticated,
     };
   }
 }
@@ -194,7 +272,7 @@ export class Consumer implements IConsumer<Consumer> {
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
     this.service = service;
-    this.id = UUID.generateID();
+    this.id = Common.generateID();
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {

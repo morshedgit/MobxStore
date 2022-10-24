@@ -2,11 +2,10 @@ import "./App.css";
 import React from "react";
 import {
   createBrowserRouter,
+  Navigate,
   redirect,
   RouterProvider,
 } from "react-router-dom";
-
-import { currentUser } from "./Models/User";
 import { MainLayout } from "./Layouts/MainLayout";
 import { AdminLayout } from "./Layouts/AdminLayout";
 import { AuthLayout } from "./Layouts/AuthLayout";
@@ -17,6 +16,7 @@ import { CategoriesPage } from "./Pages/Category/CategoriesPage";
 import { Category, categoryStore } from "./Models/Ad";
 import { CategoryDetail } from "./Pages/Category/CategoryDetail";
 import { ERROR_CODES } from "./Models/Common";
+import { currentUser } from "./Models/User";
 
 const router = createBrowserRouter([
   {
@@ -37,7 +37,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <h2 className="text-2xl">Home Page</h2>,
+        element: <Navigate to="categories" />,
       },
       {
         path: "categories",
@@ -47,33 +47,65 @@ const router = createBrowserRouter([
             errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
             children: [
               {
-                path: "/admin/categories/:id",
-                element: <CategoryDetail />,
+                path: ":id",
+                element: <CategoryDetail mode="VIEW" />,
                 loader: async ({ params }) => {
-                  debugger;
-                  if (!params.id) throw Error(ERROR_CODES.Param_Not_Found);
+                  if (!params.id && params.id !== "new")
+                    throw Error(ERROR_CODES.Param_Not_Found);
                   const result = await categoryStore.getItem(params.id);
+
                   result.store = categoryStore;
                   return result;
+                },
+              },
+              {
+                path: ":id/edit",
+                element: <CategoryDetail mode="EDIT" />,
+                loader: async ({ params }) => {
+                  if (!params.id) throw Error(ERROR_CODES.Param_Not_Found);
+                  const result = await categoryStore.getItem(params.id);
+
+                  result.store = categoryStore;
+                  return result;
+                },
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const data = Object.fromEntries(formData.entries());
+                  const id = data.catID as string;
+                  const category = await categoryStore.getItem(id);
+                  category.update({
+                    title: data.catTitle as string,
+                    description: data.catDescription as string,
+                  });
+                  return redirect(`/admin/categories/${id}`);
+                },
+              },
+              {
+                path: "new",
+                element: <CategoryDetail mode="NEW" />,
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const { catTitle, catDescription } = Object.fromEntries(
+                    formData
+                  ) as {
+                    catTitle: string;
+                    catDescription: string;
+                  };
+                  const newCategory = new Category();
+                  newCategory.title = catTitle;
+                  newCategory.description = catDescription;
+                  await categoryStore.createItem(newCategory);
+
+                  return redirect(`/admin/categories/${newCategory.id}`);
                 },
               },
             ],
           },
         ],
-        // loader: () => {
-        //   if (!currentUser.authenticated) {
-        //     return redirect(`/auth/login?returnUrl=/cars`);
-        //   }
-        // },
-        action: async ({ request }) => {
-          const formData = await request.formData();
-          const { catTitle } = Object.fromEntries(formData) as {
-            catTitle: string;
-          };
-          const newCategory = new Category();
-          newCategory.title = catTitle;
-          await categoryStore.createItem(newCategory);
-          return;
+        loader: () => {
+          if (!currentUser.authenticated) {
+            return redirect(`/auth/login?returnUrl=/cars`);
+          }
         },
       },
     ],
