@@ -120,7 +120,7 @@ export enum ERROR_CODES {
   SERVICE_ERROR = "SERVICE_ERROR",
   SERVICE_NOT_AVAILABLE = "SERVICE_NOT_AVAILABLE",
   NOT_FOUND = "NOT_FOUND",
-  Param_Not_Found = "Param_Not_Found",
+  PARAM_NOT_FOUND = "PARAM_NOT_FOUND",
   NOT_IMPLEMENTED = "NOT_IMPLEMENTED",
 }
 
@@ -174,6 +174,8 @@ export class User implements IUser<User> {
   createdAt: string = "";
   updatedAt: string = "";
   service?: IService<User>;
+  store?: IStore<User>;
+  ready: boolean = false;
   constructor(authService?: IService<User>) {
     this.service = authService;
     this.id = Common.generateID();
@@ -183,21 +185,34 @@ export class User implements IUser<User> {
       username: observable,
       authenticated: observable,
     });
-    this.isLogged();
+    this.service?.readAll().then(() => {
+      this.ready = true;
+    });
   }
-  async isLogged() {
-    const id = localStorage.getItem("loggedUserId");
-    if (!id) {
-      return;
+  async isAuthenticated() {
+    try {
+      if (this.authenticated) {
+        return true;
+      }
+      if (!this.service) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
+      await Common.wait(() => this.ready);
+      const id = localStorage.getItem("loggedUserId");
+      if (!id) {
+        return false;
+      }
+
+      const user = await this.findUserById(id);
+      if (!user || !user.authenticated) {
+        return false;
+      }
+      this.authenticated = true;
+      this.username = user.username;
+      this.id = user.id;
+      this.createdAt = user.createdAt;
+      return true;
+    } catch {
+      return false;
     }
-    const user = await this.findUserById(id);
-    if (!user) {
-      return;
-    }
-    this.authenticated = true;
-    this.username = user.username;
-    this.id = user.id;
-    this.createdAt = user.createdAt;
   }
   async findUserById(id: string): Promise<User> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
@@ -223,6 +238,7 @@ export class User implements IUser<User> {
     }
     this.authenticated = true;
     this.username = user.username;
+    this.password = user.password;
     this.id = user.id;
     this.createdAt = user.createdAt;
     await this.service.update(this);
@@ -244,6 +260,7 @@ export class User implements IUser<User> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
     const newUser = new User();
     newUser.username = credentials.username;
+    newUser.password = credentials.password;
     await this.service.create(newUser);
     return true;
   }
@@ -252,6 +269,7 @@ export class User implements IUser<User> {
     user.username = json.username;
     user.id = json.id;
     user.authenticated = json.authenticated;
+    user.password = json.password;
     return user;
   }
   toJson(consumer: User): any {
@@ -259,8 +277,19 @@ export class User implements IUser<User> {
       id: consumer.id,
       label: consumer.label,
       username: consumer.username,
+      password: consumer.password,
       authenticated: consumer.authenticated,
     };
+  }
+  async update({ username }: { username: string }) {
+    const tempTitle = this.username;
+    this.username = username;
+
+    if (!this.store) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
+    const result = await this.store.updateItem(this);
+    if (!result) {
+      this.username = tempTitle;
+    }
   }
 }
 

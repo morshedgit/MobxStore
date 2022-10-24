@@ -44,8 +44,6 @@ export class Category extends Consumer {
   }
 }
 
-export const categoryStore = new Store(new MainService(new Category()));
-
 export class Ad extends Consumer {
   title: string = "";
   bio: string = "";

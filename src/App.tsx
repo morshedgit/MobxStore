@@ -13,10 +13,13 @@ import { Login } from "./Pages/Auth/Login";
 import { ForgetPassword } from "./Pages/Auth/Forgetpassword";
 import { Signup } from "./Pages/Auth/Signup";
 import { CategoriesPage } from "./Pages/Category/CategoriesPage";
-import { Category, categoryStore } from "./Models/Ad";
+import { Category } from "./Models/Ad";
 import { CategoryDetail } from "./Pages/Category/CategoryDetail";
-import { ERROR_CODES } from "./Models/Common";
+import { ERROR_CODES, User } from "./Models/Common";
 import { currentUser } from "./Models/User";
+import { categoryStore, userStore } from "./Services/stores";
+import { UserPage } from "./Pages/Users/UserPage";
+import { UserDetail } from "./Pages/Users/UserDetail";
 
 const router = createBrowserRouter([
   {
@@ -29,6 +32,12 @@ const router = createBrowserRouter([
         element: <h2 className="text-2xl">Home Page</h2>,
       },
     ],
+    loader: async () => {
+      const isLogged = await currentUser.isAuthenticated();
+      if (!isLogged) {
+        return redirect("/auth/login?returnUrl=/");
+      }
+    },
   },
   {
     path: "admin",
@@ -38,6 +47,65 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Navigate to="categories" />,
+      },
+      {
+        path: "users",
+        element: <UserPage store={userStore} />,
+        children: [
+          {
+            errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+            children: [
+              {
+                path: ":id",
+                element: <UserDetail mode="VIEW" />,
+                loader: async ({ params }) => {
+                  if (!params.id && params.id !== "new")
+                    throw Error(ERROR_CODES.PARAM_NOT_FOUND);
+                  const result = await userStore.getItem(params.id);
+
+                  result.store = userStore;
+                  return result;
+                },
+              },
+              {
+                path: ":id/edit",
+                element: <UserDetail mode="EDIT" />,
+                loader: async ({ params }) => {
+                  if (!params.id) throw Error(ERROR_CODES.PARAM_NOT_FOUND);
+                  const result = await userStore.getItem(params.id);
+
+                  result.store = userStore;
+                  return result;
+                },
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const data = Object.fromEntries(formData.entries());
+                  const id = data.userID as string;
+                  const user = await userStore.getItem(id);
+                  user.update({
+                    username: data.username as string,
+                  });
+                  return redirect(`/admin/users/${id}`);
+                },
+              },
+              {
+                path: "new",
+                element: <UserDetail mode="NEW" />,
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const { username } = Object.fromEntries(formData) as {
+                    username: string;
+                  };
+                  const newUser = new User();
+                  newUser.username = username;
+                  await userStore.createItem(newUser);
+
+                  return redirect(`/admin/users/${newUser.id}`);
+                },
+              },
+            ],
+          },
+        ],
       },
       {
         path: "categories",
@@ -51,7 +119,7 @@ const router = createBrowserRouter([
                 element: <CategoryDetail mode="VIEW" />,
                 loader: async ({ params }) => {
                   if (!params.id && params.id !== "new")
-                    throw Error(ERROR_CODES.Param_Not_Found);
+                    throw Error(ERROR_CODES.PARAM_NOT_FOUND);
                   const result = await categoryStore.getItem(params.id);
 
                   result.store = categoryStore;
@@ -62,7 +130,7 @@ const router = createBrowserRouter([
                 path: ":id/edit",
                 element: <CategoryDetail mode="EDIT" />,
                 loader: async ({ params }) => {
-                  if (!params.id) throw Error(ERROR_CODES.Param_Not_Found);
+                  if (!params.id) throw Error(ERROR_CODES.PARAM_NOT_FOUND);
                   const result = await categoryStore.getItem(params.id);
 
                   result.store = categoryStore;
@@ -102,13 +170,14 @@ const router = createBrowserRouter([
             ],
           },
         ],
-        loader: () => {
-          if (!currentUser.authenticated) {
-            return redirect(`/auth/login?returnUrl=/cars`);
-          }
-        },
       },
     ],
+    loader: async () => {
+      const isLogged = await currentUser.isAuthenticated();
+      if (!isLogged) {
+        return redirect("/auth/login?returnUrl=/admin");
+      }
+    },
   },
   {
     path: "/auth",
@@ -172,10 +241,11 @@ const router = createBrowserRouter([
         },
       },
     ],
-    loader: ({ request }) => {
+    loader: async ({ request }) => {
       const urlSearchParams = new URLSearchParams(request.url);
       const returnUrl = urlSearchParams.get("returnUrl");
-      if (currentUser.authenticated) {
+      const isLogged = await currentUser.isAuthenticated();
+      if (isLogged) {
         if (!returnUrl) return redirect("/");
         return redirect(`/${returnUrl}`);
       }
