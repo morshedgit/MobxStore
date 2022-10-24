@@ -33,12 +33,26 @@ export const CategoriesPage = observer(
                   className="w-full flex justify-between p-2 rounded-md shadow-sm shadow-gray-400"
                 >
                   <div>
-                    <small className="flex items-center gap-x-2">
+                    <small className="flex items-center gap-x-2 min-w-[300px]">
                       {" "}
                       <span className="material-symbols-outlined text-sm">
                         auto_fix_high
                       </span>
                       <i>{format(new Date(item.createdAt), "MMMM dd, yyyy")}</i>
+                      {typeof item.owner === "string" ? (
+                        <button type="button" onClick={() => item.getOwner()}>
+                          <span className="material-symbols-outlined">
+                            person
+                          </span>
+                        </button>
+                      ) : (
+                        <button type="button">
+                          <span className="material-symbols-outlined">
+                            person
+                          </span>
+                          <p>{item.owner.username}</p>
+                        </button>
+                      )}
                     </small>
                     <div className="flex gap-x-2">
                       <h3 className="text-xl font-bold">{item.title}</h3>

@@ -27,8 +27,8 @@ export interface IConsumer<T extends IConsumer<T>> {
   id: string;
   label: string;
   createdAt: string;
-  owner: string;
   updatedAt: string;
+  owner: string | IUser<any>;
   service?: IService<T>;
   store?: IStore<T>;
   fromJson: (json: any) => Promise<T>;
@@ -307,7 +307,7 @@ export class Consumer implements IConsumer<Consumer> {
   id: string = "";
   label: string = "Consumer";
   createdAt: string = "";
-  owner = "";
+  owner: string | IUser<any> = "";
   updatedAt: string = "";
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
@@ -318,6 +318,7 @@ export class Consumer implements IConsumer<Consumer> {
     this.updatedAt = new Date().toString();
     makeObservable(this, {
       updatedAt: observable,
+      owner: observable,
     });
   }
   async fromJson(json: any): Promise<Consumer> {
@@ -330,7 +331,8 @@ export class Consumer implements IConsumer<Consumer> {
     return {
       id: consumer.id,
       label: consumer.label,
-      owner: consumer.owner,
+      owner:
+        typeof consumer.owner === "string" ? consumer.owner : consumer.owner.id,
     };
   }
 }

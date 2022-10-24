@@ -1,12 +1,15 @@
-import { ERROR_CODES, IStore } from "./Common";
+import { ERROR_CODES, IService, IStore, IUser } from "./Common";
 import { Consumer } from "./Common";
 export class Category extends Consumer {
-  id: string = "";
   title?: string = undefined;
   description?: string = undefined;
   label = "Category";
-  constructor(public store?: IStore<Consumer>) {
-    super();
+  constructor(
+    public store?: IStore<Category>,
+    public service?: IService<Category>,
+    public userFactory?: IUser<any>
+  ) {
+    super(service);
   }
   async update({ title, description }: { title: string; description: string }) {
     const tempTitle = this.title;
@@ -26,8 +29,10 @@ export class Category extends Consumer {
     c.id = json.id;
     c.createdAt = json.createdAt;
     c.updatedAt = json.updatedAt;
+    c.owner = json.owner;
     c.title = json.title;
     c.description = json.description;
+    c.userFactory = this.userFactory;
     return c;
   }
   toJson(consumer: Category) {
@@ -35,9 +40,18 @@ export class Category extends Consumer {
       id: consumer.id,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
+      owner:
+        typeof consumer.owner === "string" ? consumer.owner : consumer.owner.id,
       title: consumer.title,
       description: consumer.description,
     };
+  }
+  async getOwner() {
+    debugger;
+    if (typeof this.owner !== "string") return;
+    const o = await this.userFactory?.findUserById(this.owner);
+    if (!o) return;
+    this.owner = o;
   }
 }
 
