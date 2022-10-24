@@ -162,6 +162,7 @@ const router = createBrowserRouter([
                   const newCategory = new Category();
                   newCategory.title = catTitle;
                   newCategory.description = catDescription;
+                  newCategory.owner = currentUser.id;
                   await categoryStore.createItem(newCategory);
 
                   return redirect(`/admin/categories/${newCategory.id}`);
@@ -209,7 +210,6 @@ const router = createBrowserRouter([
               await currentUser.login({ username, password });
               const urlSearchParams = new URLSearchParams(request.url);
               const returnUrl = urlSearchParams.get("returnUrl");
-              debugger;
               const redirectPath = `${returnUrl ?? ""}`;
               return redirect(redirectPath);
             } catch (e: any) {

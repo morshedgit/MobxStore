@@ -1,15 +1,12 @@
-import { makeObservable, observable } from "mobx";
-import { ERROR_CODES, IStore, MainService, Store } from "./Common";
+import { ERROR_CODES, IStore } from "./Common";
 import { Consumer } from "./Common";
 export class Category extends Consumer {
+  id: string = "";
   title?: string = undefined;
   description?: string = undefined;
   label = "Category";
-  constructor(public store?: IStore<Category>) {
+  constructor(public store?: IStore<Consumer>) {
     super();
-    // makeObservable(this, {
-    //   title: observable,
-    // });
   }
   async update({ title, description }: { title: string; description: string }) {
     const tempTitle = this.title;

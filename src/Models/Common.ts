@@ -27,7 +27,10 @@ export interface IConsumer<T extends IConsumer<T>> {
   id: string;
   label: string;
   createdAt: string;
+  owner: string;
   updatedAt: string;
+  service?: IService<T>;
+  store?: IStore<T>;
   fromJson: (json: any) => Promise<T>;
   toJson: (consumer: T) => any;
 }
@@ -132,7 +135,10 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
       items: observable.struct,
     });
     this.service.readAll().then((items) => {
-      this.items = items;
+      this.items = items.map((item) => {
+        item.store = this;
+        return item;
+      });
       this.isReady = true;
     });
   }
@@ -173,12 +179,14 @@ export class User implements IUser<User> {
   authenticated = false;
   createdAt: string = "";
   updatedAt: string = "";
+  owner = "";
   service?: IService<User>;
   store?: IStore<User>;
   ready: boolean = false;
   constructor(authService?: IService<User>) {
     this.service = authService;
     this.id = Common.generateID();
+    this.owner = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
@@ -268,6 +276,7 @@ export class User implements IUser<User> {
     const user = new User(this.service);
     user.username = json.username;
     user.id = json.id;
+    user.owner = json.owner;
     user.authenticated = json.authenticated;
     user.password = json.password;
     return user;
@@ -275,6 +284,7 @@ export class User implements IUser<User> {
   toJson(consumer: User): any {
     return {
       id: consumer.id,
+      owner: consumer.owner,
       label: consumer.label,
       username: consumer.username,
       password: consumer.password,
@@ -297,11 +307,13 @@ export class Consumer implements IConsumer<Consumer> {
   id: string = "";
   label: string = "Consumer";
   createdAt: string = "";
+  owner = "";
   updatedAt: string = "";
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
     this.service = service;
     this.id = Common.generateID();
+    this.owner = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
@@ -311,12 +323,14 @@ export class Consumer implements IConsumer<Consumer> {
   async fromJson(json: any): Promise<Consumer> {
     const consumer = new Consumer(this.service);
     consumer.id = json.id;
+    consumer.owner = json.owner;
     return consumer;
   }
   toJson(consumer: Consumer): any {
     return {
       id: consumer.id,
       label: consumer.label,
+      owner: consumer.owner,
     };
   }
 }
