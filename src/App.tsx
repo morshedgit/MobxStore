@@ -20,7 +20,15 @@ import { currentUser } from "./Models/User";
 import { categoryStore, userStore } from "./Services/stores";
 import { UserPage } from "./Pages/Users/UserPage";
 import { UserDetail } from "./Pages/Users/UserDetail";
-
+// import { addUser, getUsers } from "./Firebase/firebase";
+// const d = {
+//   first: "Alan",
+//   middle: "Mathison",
+//   last: "Turing",
+//   born: 1912,
+// };
+// // addUser(d);
+// getUsers();
 const router = createBrowserRouter([
   {
     path: "/",
