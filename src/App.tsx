@@ -175,9 +175,9 @@ const router = createBrowserRouter([
       },
     ],
     loader: async () => {
-      const isLogged = await currentUser.isAuthenticated();
-      debugger;
-      if (!isLogged) {
+      try {
+        await currentUser.isAuthenticated();
+      } catch {
         return redirect("/auth/login?returnUrl=/admin");
       }
     },
@@ -244,10 +244,18 @@ const router = createBrowserRouter([
     loader: async ({ request }) => {
       const urlSearchParams = new URLSearchParams(request.url);
       const returnUrl = urlSearchParams.get("returnUrl");
-      const isLogged = await currentUser.isAuthenticated();
-      if (!isLogged) return;
-      if (!returnUrl) return redirect("/");
-      return redirect(`/${returnUrl}`);
+      try {
+        debugger;
+        await currentUser.isAuthenticated();
+        if (!returnUrl) return redirect("/");
+        return redirect(`/${returnUrl}`);
+      } catch {
+        return;
+      }
+      // const isLogged = await currentUser.isAuthenticated();
+      // if (!isLogged) return;
+      // if (!returnUrl) return redirect("/");
+      // return redirect(`/${returnUrl}`);
     },
   },
 ]);
