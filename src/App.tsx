@@ -17,18 +17,10 @@ import { Category } from "./Models/Ad";
 import { CategoryDetail } from "./Pages/Category/CategoryDetail";
 import { ERROR_CODES, User } from "./Models/Common";
 import { currentUser } from "./Models/User";
-import { categoryStore, userStore } from "./Services/stores";
+import { categoryStore, userStore } from "./Stores/stores";
 import { UserPage } from "./Pages/Users/UserPage";
 import { UserDetail } from "./Pages/Users/UserDetail";
-// import { addUser, getUsers } from "./Firebase/firebase";
-// const d = {
-//   first: "Alan",
-//   middle: "Mathison",
-//   last: "Turing",
-//   born: 1912,
-// };
-// // addUser(d);
-// getUsers();
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -40,12 +32,12 @@ const router = createBrowserRouter([
         element: <h2 className="text-2xl">Home Page</h2>,
       },
     ],
-    loader: async () => {
-      const isLogged = await currentUser.isAuthenticated();
-      if (!isLogged) {
-        return redirect("/auth/login?returnUrl=/");
-      }
-    },
+    // loader: async () => {
+    //   const isLogged = await currentUser.isAuthenticated();
+    //   if (!isLogged) {
+    //     return redirect("/auth/login?returnUrl=/");
+    //   }
+    // },
   },
   {
     path: "admin",
@@ -90,9 +82,9 @@ const router = createBrowserRouter([
                   const data = Object.fromEntries(formData.entries());
                   const id = data.userID as string;
                   const user = await userStore.getItem(id);
-                  user.update({
-                    username: data.username as string,
-                  });
+                  // user.update({
+                  //   username: data.username as string,
+                  // });
                   return redirect(`/admin/users/${id}`);
                 },
               },
@@ -150,8 +142,9 @@ const router = createBrowserRouter([
                   const id = data.catID as string;
                   const category = await categoryStore.getItem(id);
                   category.update({
-                    title: data.catTitle as string,
-                    description: data.catDescription as string,
+                    title: data.title as string,
+                    description: data.description as string,
+                    ownerId: data.ownerId as string,
                   });
                   return redirect(`/admin/categories/${id}`);
                 },
@@ -161,16 +154,16 @@ const router = createBrowserRouter([
                 element: <CategoryDetail mode="NEW" />,
                 action: async ({ request }) => {
                   const formData = await request.formData();
-                  const { catTitle, catDescription } = Object.fromEntries(
+                  const { title, description } = Object.fromEntries(
                     formData
                   ) as {
-                    catTitle: string;
-                    catDescription: string;
+                    title: string;
+                    description: string;
                   };
                   const newCategory = new Category();
-                  newCategory.title = catTitle;
-                  newCategory.description = catDescription;
-                  newCategory.owner = currentUser.id;
+                  newCategory.title = title;
+                  newCategory.description = description;
+                  newCategory.ownerId = currentUser.id;
                   await categoryStore.createItem(newCategory);
 
                   return redirect(`/admin/categories/${newCategory.id}`);
@@ -183,6 +176,7 @@ const router = createBrowserRouter([
     ],
     loader: async () => {
       const isLogged = await currentUser.isAuthenticated();
+      debugger;
       if (!isLogged) {
         return redirect("/auth/login?returnUrl=/admin");
       }
@@ -205,6 +199,7 @@ const router = createBrowserRouter([
       },
       {
         path: "login",
+        errorElement: <Login />,
         element: <Login />,
         action: async ({ request }) => {
           const formData = await request.formData();
@@ -214,15 +209,11 @@ const router = createBrowserRouter([
           };
 
           if (username && password) {
-            try {
-              await currentUser.login({ username, password });
-              const urlSearchParams = new URLSearchParams(request.url);
-              const returnUrl = urlSearchParams.get("returnUrl");
-              const redirectPath = `${returnUrl ?? ""}`;
-              return redirect(redirectPath);
-            } catch (e: any) {
-              alert(e.message);
-            }
+            await currentUser.login({ username, password });
+            const urlSearchParams = new URLSearchParams(request.url);
+            const returnUrl = urlSearchParams.get("returnUrl");
+            const redirectPath = `${returnUrl ?? ""}`;
+            return redirect(redirectPath);
           }
           return;
         },
@@ -233,6 +224,7 @@ const router = createBrowserRouter([
       },
       {
         path: "signup",
+        errorElement: <Signup />,
         element: <Signup />,
         action: async ({ request }) => {
           const formData = await request.formData();
@@ -253,10 +245,9 @@ const router = createBrowserRouter([
       const urlSearchParams = new URLSearchParams(request.url);
       const returnUrl = urlSearchParams.get("returnUrl");
       const isLogged = await currentUser.isAuthenticated();
-      if (isLogged) {
-        if (!returnUrl) return redirect("/");
-        return redirect(`/${returnUrl}`);
-      }
+      if (!isLogged) return;
+      if (!returnUrl) return redirect("/");
+      return redirect(`/${returnUrl}`);
     },
   },
 ]);

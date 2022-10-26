@@ -11,17 +11,28 @@ export class Category extends Consumer {
   ) {
     super(service);
   }
-  async update({ title, description }: { title: string; description: string }) {
+  async update({
+    title,
+    description,
+    ownerId,
+  }: {
+    title: string;
+    description: string;
+    ownerId: string;
+  }) {
     const tempTitle = this.title;
     const tempDesc = this.description;
+    const tempOwnerId = this.ownerId;
     this.title = title;
     this.description = description;
+    this.ownerId = ownerId;
 
     if (!this.store) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
     const result = await this.store.updateItem(this);
     if (!result) {
       this.title = tempTitle;
       this.description = tempDesc;
+      this.ownerId = tempOwnerId;
     }
   }
   async fromJson(json: any) {
@@ -29,7 +40,7 @@ export class Category extends Consumer {
     c.id = json.id;
     c.createdAt = json.createdAt;
     c.updatedAt = json.updatedAt;
-    c.owner = json.owner;
+    c.ownerId = json.ownerId;
     c.title = json.title;
     c.description = json.description;
     c.userFactory = this.userFactory;
@@ -40,16 +51,14 @@ export class Category extends Consumer {
       id: consumer.id,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
-      owner:
-        typeof consumer.owner === "string" ? consumer.owner : consumer.owner.id,
+      ownerId: consumer.ownerId,
       title: consumer.title,
       description: consumer.description,
     };
   }
   async getOwner() {
-    debugger;
-    if (typeof this.owner !== "string") return;
-    const o = await this.userFactory?.findUserById(this.owner);
+    if (this.owner) return;
+    const o = await this.userFactory?.findUserById(this.ownerId);
     if (!o) return;
     this.owner = o;
   }

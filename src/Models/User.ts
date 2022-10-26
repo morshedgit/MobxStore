@@ -1,3 +1,4 @@
-import { MainService, User } from "./Common";
+import { FirebaseAuthService, FirebaseService } from "../services/firebase";
+import { User } from "./Common";
 
-export const currentUser = new User(new MainService(new User()));
+export const currentUser = new User(new FirebaseAuthService(new User()));

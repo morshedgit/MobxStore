@@ -28,7 +28,8 @@ export interface IConsumer<T extends IConsumer<T>> {
   label: string;
   createdAt: string;
   updatedAt: string;
-  owner: string | IUser<any>;
+  ownerId: string;
+  owner?: IUser<any>;
   service?: IService<T>;
   store?: IStore<T>;
   fromJson: (json: any) => Promise<T>;
@@ -38,9 +39,8 @@ export interface IConsumer<T extends IConsumer<T>> {
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
   authenticated: boolean;
-  service?: IService<T>;
+  service?: IAuthService<T>;
   login(credentials: { username: string; password: string }): Promise<T>;
-  findUserById(id: string): Promise<T>;
   logout(): Promise<boolean>;
   signup(credentials: { username: string; password: string }): Promise<boolean>;
 }
@@ -53,6 +53,17 @@ export interface IService<T extends IConsumer<T>> {
   delete(item: T): Promise<boolean>;
   find(query: { key: string; value: any }[]): Promise<T | undefined>;
 }
+export interface IAuthService<T extends IConsumer<T>> extends IService<T> {
+  signup(credentials: {
+    username: string;
+    password: string;
+  }): Promise<IUser<T>>;
+  login(credentials: { username: string; password: string }): Promise<IUser<T>>;
+  logout(): Promise<boolean>;
+  currentUser(): Promise<IUser<T>>;
+  updateUser(item: IUser<T>): Promise<IUser<T>>;
+  deleteUser(item: IUser<T>): Promise<IUser<T>>;
+}
 
 export interface IStore<T extends IConsumer<T>> {
   getItems(): Promise<T[]>;
@@ -60,63 +71,6 @@ export interface IStore<T extends IConsumer<T>> {
   deleteItem(item: T): Promise<boolean>;
   updateItem(item: T): Promise<boolean>;
   getItem(id: string): Promise<T>;
-}
-
-export class MainService<T extends IConsumer<T>> implements IService<T> {
-  items: any[] = [];
-
-  constructor(private item: T) {
-    this.items = JSON.parse(localStorage.getItem(item.label) ?? "[]");
-  }
-  async create(item: T): Promise<boolean> {
-    const newItem = item.toJson(item);
-    this.items.push(newItem);
-    await localStorage.setItem(item.label, JSON.stringify(this.items));
-    return true;
-  }
-  async read(id: string): Promise<T> {
-    const item = this.items.find((cur) => cur.id === id);
-    if (!item) throw Error("NOT_FOUND");
-    return this.item.fromJson(item);
-  }
-  async readAll(ids?: string[] | undefined): Promise<T[]> {
-    const items = await Promise.all(
-      this.items.map((cur) => this.item.fromJson(cur))
-    );
-    return items;
-  }
-  async update(item: T): Promise<boolean> {
-    const foundItem = this.items.find((cur) => cur.id === item.id);
-    if (!foundItem) throw Error("NOT_FOUND");
-    this.items = this.items.map((cur) => {
-      if (item.id === cur.id) {
-        return item.toJson(item);
-      }
-      return cur;
-    });
-    await localStorage.setItem(item.label, JSON.stringify(this.items));
-    return true;
-  }
-  async delete(item: T): Promise<boolean> {
-    const foundItem = this.items.find((cur) => cur.id === item.id);
-    if (!foundItem) throw Error("NOT_FOUND");
-    this.items = this.items.filter((cur) => cur.id !== item.id);
-    await localStorage.setItem(item.label, JSON.stringify(this.items));
-    return true;
-  }
-  async find(query: { key: string; value: any }[]) {
-    const result = this.items.find((cur) => {
-      return query
-        .map(({ key, value }) => {
-          if (cur[key] !== value) {
-            return false;
-          }
-          return true;
-        })
-        .every((c) => c);
-    });
-    return result;
-  }
 }
 
 export enum ERROR_CODES {
@@ -172,93 +126,54 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
 }
 
 export class User implements IUser<User> {
+  service?: IAuthService<User> | undefined;
+  owner?: IUser<any> | undefined;
+  store?: IStore<User> | undefined;
   id: string = "";
   label: string = "User";
-  username: string = "";
-  password?: string = "";
-  authenticated = false;
   createdAt: string = "";
   updatedAt: string = "";
-  owner = "";
-  service?: IService<User>;
-  store?: IStore<User>;
-  ready: boolean = false;
-  constructor(authService?: IService<User>) {
+  ownerId = "";
+  username: string = "";
+  authenticated = false;
+  constructor(authService?: IAuthService<User>) {
     this.service = authService;
     this.id = Common.generateID();
-    this.owner = this.id;
+    this.ownerId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
       username: observable,
       authenticated: observable,
     });
-    this.service?.readAll().then(() => {
-      this.ready = true;
-    });
   }
   async isAuthenticated() {
-    try {
-      if (this.authenticated) {
-        return true;
-      }
-      if (!this.service) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
-      await Common.wait(() => this.ready);
-      const id = localStorage.getItem("loggedUserId");
-      if (!id) {
-        return false;
-      }
-
-      const user = await this.findUserById(id);
-      if (!user || !user.authenticated) {
-        return false;
-      }
-      this.authenticated = true;
-      this.username = user.username;
-      this.id = user.id;
-      this.createdAt = user.createdAt;
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  async findUserById(id: string): Promise<User> {
-    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
-    return this.service.read(id);
+    if (this.authenticated) return true;
+    const currentUser = await this.service?.currentUser();
+    if (!currentUser) throw Error(ERROR_CODES.NOT_FOUND);
+    this.authenticated = true;
+    this.username = currentUser?.username;
+    return true;
   }
   async login(credentials: {
     username: string;
     password: string;
   }): Promise<User> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
-    const user = await this.service.find([
-      {
-        key: "username",
-        value: credentials.username,
-      },
-      {
-        key: "password",
-        value: credentials.password,
-      },
-    ]);
+    const user = await this.service.login(credentials);
     if (!user) {
       throw Error(ERROR_CODES.NOT_FOUND);
     }
     this.authenticated = true;
     this.username = user.username;
-    this.password = user.password;
     this.id = user.id;
     this.createdAt = user.createdAt;
-    await this.service.update(this);
-    localStorage.setItem("loggedUserId", this.id);
     return this;
   }
-
   async logout(): Promise<boolean> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
     this.authenticated = false;
-    await this.service.update(this);
-    localStorage.setItem("loggedUserId", "");
+    await this.service.logout();
     return true;
   }
   async signup(credentials: {
@@ -266,10 +181,9 @@ export class User implements IUser<User> {
     password: string;
   }): Promise<boolean> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    await this.service.signup(credentials);
     const newUser = new User();
     newUser.username = credentials.username;
-    newUser.password = credentials.password;
-    await this.service.create(newUser);
     return true;
   }
   async fromJson(json: any): Promise<User> {
@@ -278,7 +192,6 @@ export class User implements IUser<User> {
     user.id = json.id;
     user.owner = json.owner;
     user.authenticated = json.authenticated;
-    user.password = json.password;
     return user;
   }
   toJson(consumer: User): any {
@@ -287,33 +200,23 @@ export class User implements IUser<User> {
       owner: consumer.owner,
       label: consumer.label,
       username: consumer.username,
-      password: consumer.password,
       authenticated: consumer.authenticated,
     };
-  }
-  async update({ username }: { username: string }) {
-    const tempTitle = this.username;
-    this.username = username;
-
-    if (!this.store) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
-    const result = await this.store.updateItem(this);
-    if (!result) {
-      this.username = tempTitle;
-    }
   }
 }
 
 export class Consumer implements IConsumer<Consumer> {
-  id: string = "";
+  id: string;
   label: string = "Consumer";
-  createdAt: string = "";
-  owner: string | IUser<any> = "";
+  createdAt: string;
+  ownerId: string;
+  owner?: IUser<any>;
   updatedAt: string = "";
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
     this.service = service;
     this.id = Common.generateID();
-    this.owner = this.id;
+    this.ownerId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
@@ -324,15 +227,14 @@ export class Consumer implements IConsumer<Consumer> {
   async fromJson(json: any): Promise<Consumer> {
     const consumer = new Consumer(this.service);
     consumer.id = json.id;
-    consumer.owner = json.owner;
+    consumer.ownerId = json.ownerId;
     return consumer;
   }
   toJson(consumer: Consumer): any {
     return {
       id: consumer.id,
       label: consumer.label,
-      owner:
-        typeof consumer.owner === "string" ? consumer.owner : consumer.owner.id,
+      ownerId: consumer.ownerId,
     };
   }
 }
