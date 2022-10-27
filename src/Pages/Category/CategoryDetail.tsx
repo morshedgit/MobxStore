@@ -14,7 +14,7 @@ export const CategoryDetail = observer(
     }, []);
 
     return (
-      <section className="w-full md:min-w-[600px] md:w-[80%]">
+      <section className="w-full md:w-[80%]">
         <div className="flex justify-between  w-full border-b-2 border-sky-200">
           <h2 className="text-2xl">
             <Link to="/admin/categories">Categories</Link>

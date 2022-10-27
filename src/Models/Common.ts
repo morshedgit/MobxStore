@@ -42,15 +42,16 @@ export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   service?: IAuthService<T>;
   login(credentials: { username: string; password: string }): Promise<T>;
   logout(): Promise<boolean>;
-  signup(credentials: { username: string; password: string }): Promise<boolean>;
+  signup(credentials: { username: string; password: string }): Promise<T>;
+  findUserById(id: string): Promise<T>;
 }
 
 export interface IService<T extends IConsumer<T>> {
-  create(item: T): Promise<boolean>;
+  create(item: T): Promise<T>;
   read(id: string): Promise<T>;
   readAll(ids?: string[]): Promise<T[]>;
-  update(item: T): Promise<boolean>;
-  delete(item: T): Promise<boolean>;
+  update(item: T): Promise<T>;
+  delete(item: T): Promise<T>;
   find(query: { key: string; value: any }[]): Promise<T | undefined>;
 }
 export interface IAuthService<T extends IConsumer<T>> extends IService<T> {
@@ -67,9 +68,9 @@ export interface IAuthService<T extends IConsumer<T>> extends IService<T> {
 
 export interface IStore<T extends IConsumer<T>> {
   getItems(): Promise<T[]>;
-  createItem(item: T): Promise<boolean>;
-  deleteItem(item: T): Promise<boolean>;
-  updateItem(item: T): Promise<boolean>;
+  createItem(item: T): Promise<T>;
+  deleteItem(item: T): Promise<T>;
+  updateItem(item: T): Promise<T>;
   getItem(id: string): Promise<T>;
 }
 
@@ -100,20 +101,20 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
     await Common.wait(() => this.isReady);
     return this.items;
   }
-  createItem(item: T): Promise<boolean> {
-    const result = this.service.create(item);
+  async createItem(item: T): Promise<T> {
+    const result = await this.service.create(item);
     if (!result) throw Error("SERVICE_ERROR");
     this.items.push(item);
     return result;
   }
-  deleteItem(item: T): Promise<boolean> {
-    const result = this.service.delete(item);
+  async deleteItem(item: T): Promise<T> {
+    const result = await this.service.delete(item);
     if (!result) throw Error("SERVICE_ERROR");
     this.items = this.items.filter((cur) => cur.id !== item.id);
     return result;
   }
-  updateItem(item: T): Promise<boolean> {
-    const result = this.service.update(item);
+  async updateItem(item: T): Promise<T> {
+    const result = await this.service.update(item);
     if (!result) throw Error("SERVICE_ERROR");
     return result;
   }
@@ -147,6 +148,11 @@ export class User implements IUser<User> {
       authenticated: observable,
     });
   }
+  findUserById(id: string): Promise<User> {
+    const user = this.service?.read(id);
+    if (!user) throw new Error(ERROR_CODES.NOT_FOUND);
+    return user;
+  }
   async isAuthenticated() {
     if (this.authenticated) return true;
     const currentUser = await this.service?.currentUser();
@@ -179,12 +185,12 @@ export class User implements IUser<User> {
   async signup(credentials: {
     username: string;
     password: string;
-  }): Promise<boolean> {
+  }): Promise<User> {
     if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
     await this.service.signup(credentials);
     const newUser = new User();
     newUser.username = credentials.username;
-    return true;
+    return newUser;
   }
   async fromJson(json: any): Promise<User> {
     const user = new User(this.service);

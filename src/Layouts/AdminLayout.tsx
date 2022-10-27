@@ -3,13 +3,17 @@ import { Outlet } from "react-router-dom";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { AdminSidebar } from "./AdminSidebar";
+import { useState } from "react";
 export const AdminLayout = observer(() => {
+  const [showSideMenu, setShowSideMenu] = useState(false);
   return (
     <div className={`w-screen h-screen flex flex-col`}>
-      <Header />
+      <Header onMenuToggle={() => setShowSideMenu((v) => !v)} />
       <div className="w-full flex-grow flex">
-        <Sidebar />
-        <AdminSidebar />
+        <section className={`${showSideMenu ? "flex" : "hidden"} md:flex`}>
+          <Sidebar />
+          <AdminSidebar />
+        </section>
         <main className="p-2 w-full">
           <Outlet />
         </main>

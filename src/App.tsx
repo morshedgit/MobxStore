@@ -245,7 +245,6 @@ const router = createBrowserRouter([
       const urlSearchParams = new URLSearchParams(request.url);
       const returnUrl = urlSearchParams.get("returnUrl");
       try {
-        debugger;
         await currentUser.isAuthenticated();
         if (!returnUrl) return redirect("/");
         return redirect(`/${returnUrl}`);

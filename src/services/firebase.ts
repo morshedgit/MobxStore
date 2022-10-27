@@ -44,16 +44,25 @@ const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 // Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
+const auth = getAuth(app);
 
 export class FirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
-  constructor(private factory: T) {}
+  constructor(private factory: T) {
+    this.init();
+  }
+  async init() {
+    return new Promise((res) => {
+      auth.onAuthStateChanged((user) => {
+        res(user);
+      });
+    });
+  }
   async signup(credentials: {
     username: string;
     password: string;
   }): Promise<IUser<T>> {
-    const auth = getAuth();
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       credentials.username,
@@ -73,7 +82,6 @@ export class FirebaseAuthService<T extends IUser<T>>
     username: string;
     password: string;
   }): Promise<IUser<T>> {
-    const auth = getAuth();
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
@@ -87,12 +95,11 @@ export class FirebaseAuthService<T extends IUser<T>>
     return loggedUser;
   }
   async logout(): Promise<boolean> {
-    const auth = getAuth();
     await signOut(auth);
     return true;
   }
   async currentUser(): Promise<IUser<T>> {
-    const auth = getAuth();
+    await this.init();
     const user = auth.currentUser;
     if (!user) throw Error(ERROR_CODES.NOT_FOUND);
     const newUser = this.factory.fromJson({
@@ -107,19 +114,20 @@ export class FirebaseAuthService<T extends IUser<T>>
   deleteUser(item: IUser<T>): Promise<IUser<T>> {
     throw new Error("Method not implemented.");
   }
-  async create(item: T): Promise<boolean> {
+  async create(item: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
   read(id: string): Promise<T> {
     throw new Error("Method not implemented.");
+    // getAuth().getUser()
   }
   readAll(ids?: string[] | undefined): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
-  update(item: T): Promise<boolean> {
+  update(item: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  delete(item: T): Promise<boolean> {
+  delete(item: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
   async find(query: { key: string; value: any }[]): Promise<T | undefined> {
@@ -129,10 +137,11 @@ export class FirebaseAuthService<T extends IUser<T>>
 
 export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
   constructor(private factory: T) {}
-  async create(item: T): Promise<boolean> {
+  async create(item: T): Promise<T> {
     const jsonData = item.toJson(item);
     const docRef = await addDoc(collection(db, this.factory.label), jsonData);
-    return true;
+    item.id = docRef.id;
+    return item;
   }
   read(id: string): Promise<T> {
     throw new Error("Method not implemented.");
@@ -148,15 +157,15 @@ export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
 
     return items;
   }
-  async update(item: T): Promise<boolean> {
+  async update(item: T): Promise<T> {
     const itemRef = doc(db, item.label, item.id);
     await updateDoc(itemRef, item.toJson(item));
-    return true;
+    return item;
   }
-  async delete(item: T): Promise<boolean> {
+  async delete(item: T): Promise<T> {
     const itemRef = doc(db, item.label, item.id);
     await deleteDoc(itemRef);
-    return true;
+    return item;
   }
   find(query: { key: string; value: any }[]): Promise<T | undefined> {
     throw new Error("Method not implemented.");
