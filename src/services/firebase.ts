@@ -4,7 +4,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore, setDoc } from "firebase/firestore";
 import {
   collection,
-  addDoc,
+  getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
@@ -23,6 +23,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
+import { query, where } from "firebase/firestore";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -102,9 +103,11 @@ export class FirebaseAuthService<T extends IUser<T>>
     await this.init();
     const user = auth.currentUser;
     if (!user) throw Error(ERROR_CODES.NOT_FOUND);
+    const userProfile = await this.read(user.uid);
     const newUser = this.factory.fromJson({
       username: user?.email,
       id: user?.uid,
+      role: userProfile.role,
     });
     return newUser;
   }
@@ -117,9 +120,19 @@ export class FirebaseAuthService<T extends IUser<T>>
   async create(item: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  read(id: string): Promise<T> {
+  async read(id: string): Promise<T> {
+    const userRef = doc(db, `users/${id}`);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error(ERROR_CODES.NOT_FOUND);
+    const user = userSnap.data();
+    const newUser = this.factory.fromJson({
+      username: user?.email,
+      id: user?.uid,
+      role: user?.role,
+    });
+    return newUser;
+
     throw new Error("Method not implemented.");
-    // getAuth().getUser()
   }
   readAll(ids?: string[] | undefined): Promise<T[]> {
     throw new Error("Method not implemented.");
@@ -148,8 +161,13 @@ export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
     throw new Error("Method not implemented.");
   }
   async readAll(ids?: string[] | undefined): Promise<T[]> {
-    const i = auth.currentUser?.uid;
+    const uid = auth.currentUser?.uid;
     debugger;
+
+    const itemsRef = collection(db, this.factory.label);
+
+    const q = query(itemsRef, where("author", "in", [uid]));
+
     const querySnapshot = await getDocs(collection(db, this.factory.label));
     const items: T[] = [];
     querySnapshot.forEach(async (doc) => {

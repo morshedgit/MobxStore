@@ -38,6 +38,7 @@ export interface IConsumer<T extends IConsumer<T>> {
 
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
+  role: "admin" | "subscriber";
   authenticated: boolean;
   service?: IAuthService<T>;
   login(credentials: { username: string; password: string }): Promise<T>;
@@ -136,6 +137,7 @@ export class User implements IUser<User> {
   updatedAt: string = "";
   authorId = "";
   username: string = "";
+  role = "subscriber" as const;
   authenticated = false;
   constructor(authService?: IAuthService<User>) {
     this.service = authService;
@@ -196,6 +198,7 @@ export class User implements IUser<User> {
   async fromJson(json: any): Promise<User> {
     const user = new User(this.service);
     user.username = json.username;
+    user.role = json.role;
     user.id = json.id;
     user.author = json.owner;
     user.authenticated = json.authenticated;
