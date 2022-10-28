@@ -50,13 +50,13 @@ export const CategoryDetail = observer(
                 auto_fix_high
               </span>
               <i>{format(new Date(category.createdAt), "MMMM dd, yyyy")}</i>
-              {category.owner ? (
+              {category.author ? (
                 <Link
-                  to={`/admin/users/${category.ownerId}`}
+                  to={`/admin/users/${category.authorId}`}
                   className="flex gap-2 items-center"
                 >
                   <span className="material-symbols-outlined">person</span>
-                  <p>{category.owner.username}</p>
+                  <p>{category.author.username}</p>
                 </Link>
               ) : (
                 <span className="material-symbols-outlined">pending</span>

@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, setDoc } from "firebase/firestore";
 import {
   collection,
   addDoc,
@@ -138,15 +138,18 @@ export class FirebaseAuthService<T extends IUser<T>>
 export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
   constructor(private factory: T) {}
   async create(item: T): Promise<T> {
-    const jsonData = item.toJson(item);
-    const docRef = await addDoc(collection(db, this.factory.label), jsonData);
+    const docRef = doc(collection(db, this.factory.label));
     item.id = docRef.id;
+    const jsonData = item.toJson(item);
+    await setDoc(docRef, jsonData);
     return item;
   }
   read(id: string): Promise<T> {
     throw new Error("Method not implemented.");
   }
   async readAll(ids?: string[] | undefined): Promise<T[]> {
+    const i = auth.currentUser?.uid;
+    debugger;
     const querySnapshot = await getDocs(collection(db, this.factory.label));
     const items: T[] = [];
     querySnapshot.forEach(async (doc) => {

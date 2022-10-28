@@ -22,17 +22,17 @@ export class Category extends Consumer {
   }) {
     const tempTitle = this.title;
     const tempDesc = this.description;
-    const tempOwnerId = this.ownerId;
+    const tempOwnerId = this.authorId;
     this.title = title;
     this.description = description;
-    this.ownerId = ownerId;
+    this.authorId = ownerId;
 
     if (!this.store) throw Error(ERROR_CODES.SERVICE_NOT_AVAILABLE);
     const result = await this.store.updateItem(this);
     if (!result) {
       this.title = tempTitle;
       this.description = tempDesc;
-      this.ownerId = tempOwnerId;
+      this.authorId = tempOwnerId;
     }
   }
   async fromJson(json: any) {
@@ -40,7 +40,7 @@ export class Category extends Consumer {
     c.id = json.id;
     c.createdAt = json.createdAt;
     c.updatedAt = json.updatedAt;
-    c.ownerId = json.ownerId;
+    c.authorId = json.author;
     c.title = json.title;
     c.description = json.description;
     c.userFactory = this.userFactory;
@@ -51,16 +51,16 @@ export class Category extends Consumer {
       id: consumer.id,
       createdAt: consumer.createdAt,
       updatedAt: consumer.updatedAt,
-      ownerId: consumer.ownerId,
+      author: consumer.authorId,
       title: consumer.title,
       description: consumer.description,
     };
   }
   async getOwner() {
-    if (this.owner) return;
-    const o = await this.userFactory?.findUserById(this.ownerId);
+    if (this.author) return;
+    const o = await this.userFactory?.findUserById(this.authorId);
     if (!o) return;
-    this.owner = o;
+    this.author = o;
   }
 }
 

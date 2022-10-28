@@ -28,8 +28,8 @@ export interface IConsumer<T extends IConsumer<T>> {
   label: string;
   createdAt: string;
   updatedAt: string;
-  ownerId: string;
-  owner?: IUser<any>;
+  authorId: string;
+  author?: IUser<any>;
   service?: IService<T>;
   store?: IStore<T>;
   fromJson: (json: any) => Promise<T>;
@@ -128,19 +128,19 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
 
 export class User implements IUser<User> {
   service?: IAuthService<User> | undefined;
-  owner?: IUser<any> | undefined;
+  author?: IUser<any> | undefined;
   store?: IStore<User> | undefined;
   id: string = "";
   label: string = "User";
   createdAt: string = "";
   updatedAt: string = "";
-  ownerId = "";
+  authorId = "";
   username: string = "";
   authenticated = false;
   constructor(authService?: IAuthService<User>) {
     this.service = authService;
     this.id = Common.generateID();
-    this.ownerId = this.id;
+    this.authorId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
@@ -159,6 +159,7 @@ export class User implements IUser<User> {
     if (!currentUser) throw Error(ERROR_CODES.NOT_FOUND);
     this.authenticated = true;
     this.username = currentUser?.username;
+    this.id = currentUser.id;
     return true;
   }
   async login(credentials: {
@@ -196,14 +197,14 @@ export class User implements IUser<User> {
     const user = new User(this.service);
     user.username = json.username;
     user.id = json.id;
-    user.owner = json.owner;
+    user.author = json.owner;
     user.authenticated = json.authenticated;
     return user;
   }
   toJson(consumer: User): any {
     return {
       id: consumer.id,
-      owner: consumer.owner,
+      owner: consumer.author,
       label: consumer.label,
       username: consumer.username,
       authenticated: consumer.authenticated,
@@ -215,32 +216,32 @@ export class Consumer implements IConsumer<Consumer> {
   id: string;
   label: string = "Consumer";
   createdAt: string;
-  ownerId: string;
-  owner?: IUser<any>;
+  authorId: string;
+  author?: IUser<any>;
   updatedAt: string = "";
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
     this.service = service;
     this.id = Common.generateID();
-    this.ownerId = this.id;
+    this.authorId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
       updatedAt: observable,
-      owner: observable,
+      author: observable,
     });
   }
   async fromJson(json: any): Promise<Consumer> {
     const consumer = new Consumer(this.service);
     consumer.id = json.id;
-    consumer.ownerId = json.ownerId;
+    consumer.authorId = json.author;
     return consumer;
   }
   toJson(consumer: Consumer): any {
     return {
       id: consumer.id,
       label: consumer.label,
-      ownerId: consumer.ownerId,
+      author: consumer.authorId,
     };
   }
 }

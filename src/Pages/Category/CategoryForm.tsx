@@ -34,12 +34,12 @@ export const CategoryForm = observer((props: { category?: Category }) => {
             required
           />
         </fieldset>
-        {props.category?.owner && (
+        {props.category?.author && (
           <fieldset>
             <label htmlFor="ownerId">Owner</label>
             <select
               id="ownerId"
-              defaultValue={props.category.owner.id}
+              defaultValue={props.category.author.id}
               name="ownerId"
               className="form-input"
               required

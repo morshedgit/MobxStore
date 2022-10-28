@@ -163,7 +163,7 @@ const router = createBrowserRouter([
                   const newCategory = new Category();
                   newCategory.title = title;
                   newCategory.description = description;
-                  newCategory.ownerId = currentUser.id;
+                  newCategory.authorId = currentUser.id;
                   await categoryStore.createItem(newCategory);
 
                   return redirect(`/admin/categories/${newCategory.id}`);
