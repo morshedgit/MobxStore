@@ -163,7 +163,7 @@ const router = createBrowserRouter([
                   const newCategory = new Category();
                   newCategory.title = title;
                   newCategory.description = description;
-                  newCategory.authorId = currentUser.id;
+                  newCategory.creatorId = currentUser.id;
                   await categoryStore.createItem(newCategory);
 
                   return redirect(`/admin/categories/${newCategory.id}`);
@@ -261,6 +261,7 @@ const router = createBrowserRouter([
 function App() {
   return (
     <React.StrictMode>
+      <h1>Hello WOrld</h1>
       <RouterProvider router={router} />
     </React.StrictMode>
   );

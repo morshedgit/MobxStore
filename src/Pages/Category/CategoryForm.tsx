@@ -6,7 +6,7 @@ import { userStore } from "../../Stores/stores";
 
 export const CategoryForm = observer((props: { category?: Category }) => {
   useEffect(() => {
-    props.category?.getOwner();
+    props.category?.getCreator();
   }, [props.category]);
   return (
     <Form method="post" className="flex flex-col gap-2 p-4">
@@ -34,12 +34,12 @@ export const CategoryForm = observer((props: { category?: Category }) => {
             required
           />
         </fieldset>
-        {props.category?.author && (
+        {props.category?.creator && (
           <fieldset>
             <label htmlFor="ownerId">Owner</label>
             <select
               id="ownerId"
-              defaultValue={props.category.author.id}
+              defaultValue={props.category.creator.id}
               name="ownerId"
               className="form-input"
               required

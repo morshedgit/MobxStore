@@ -43,19 +43,19 @@ export const CategoriesPage = observer(
                         auto_fix_high
                       </span>
                       <i>{format(new Date(item.createdAt), "MMMM dd, yyyy")}</i>
-                      {item.author ? (
+                      {item.creator ? (
                         <span className="flex gap-2 items-center">
                           <span className="material-symbols-outlined">
                             person
                           </span>
-                          <p>{item.author.username}</p>
+                          <p>{item.creator.username}</p>
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            item.getOwner();
+                            item.getCreator();
                           }}
                         >
                           <span className="material-symbols-outlined">

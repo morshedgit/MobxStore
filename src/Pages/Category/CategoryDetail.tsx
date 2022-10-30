@@ -10,7 +10,7 @@ export const CategoryDetail = observer(
     const category: Category = useLoaderData() as Category;
 
     useEffect(() => {
-      category?.getOwner();
+      category?.getCreator();
     }, []);
 
     return (
@@ -50,13 +50,13 @@ export const CategoryDetail = observer(
                 auto_fix_high
               </span>
               <i>{format(new Date(category.createdAt), "MMMM dd, yyyy")}</i>
-              {category.author ? (
+              {category.creator ? (
                 <Link
-                  to={`/admin/users/${category.authorId}`}
+                  to={`/admin/users/${category.creatorId}`}
                   className="flex gap-2 items-center"
                 >
                   <span className="material-symbols-outlined">person</span>
-                  <p>{category.author.username}</p>
+                  <p>{category.creator.username}</p>
                 </Link>
               ) : (
                 <span className="material-symbols-outlined">pending</span>

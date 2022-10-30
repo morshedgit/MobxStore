@@ -28,8 +28,8 @@ export interface IConsumer<T extends IConsumer<T>> {
   label: string;
   createdAt: string;
   updatedAt: string;
-  authorId: string;
-  author?: IUser<any>;
+  creatorId: string;
+  creator?: IUser<any>;
   service?: IService<T>;
   store?: IStore<T>;
   fromJson: (json: any) => Promise<T>;
@@ -38,7 +38,7 @@ export interface IConsumer<T extends IConsumer<T>> {
 
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
-  role: "admin" | "subscriber";
+  role: "admin" | "subscriber" | "anonymous";
   authenticated: boolean;
   service?: IAuthService<T>;
   login(credentials: { username: string; password: string }): Promise<T>;
@@ -56,6 +56,7 @@ export interface IService<T extends IConsumer<T>> {
   find(query: { key: string; value: any }[]): Promise<T | undefined>;
 }
 export interface IAuthService<T extends IConsumer<T>> extends IService<T> {
+  isReady(): Promise<boolean>;
   signup(credentials: {
     username: string;
     password: string;
@@ -68,6 +69,7 @@ export interface IAuthService<T extends IConsumer<T>> extends IService<T> {
 }
 
 export interface IStore<T extends IConsumer<T>> {
+  isReady(): Promise<boolean>;
   getItems(): Promise<T[]>;
   createItem(item: T): Promise<T>;
   deleteItem(item: T): Promise<T>;
@@ -85,21 +87,28 @@ export enum ERROR_CODES {
 
 export class Store<T extends IConsumer<T>> implements IStore<T> {
   items: T[] = [];
-  isReady = false;
+  _isReady = false;
   constructor(private service: IService<T>) {
     makeObservable(this, {
       items: observable.struct,
     });
-    this.service.readAll().then((items) => {
+    this.isReady().then(() => {
+      console.log(`Store ${this.items[0].label} is ready`);
+    });
+  }
+  async isReady(): Promise<boolean> {
+    return new Promise(async (res, rej) => {
+      if (this._isReady) res(true);
+      const items = await this.service.readAll();
       this.items = items.map((item) => {
         item.store = this;
         return item;
       });
-      this.isReady = true;
+      this._isReady = true;
+      res(true);
     });
   }
   async getItems(t?: number): Promise<T[]> {
-    await Common.wait(() => this.isReady);
     return this.items;
   }
   async createItem(item: T): Promise<T> {
@@ -120,7 +129,7 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
     return result;
   }
   async getItem(id: string): Promise<T> {
-    await Common.wait(() => this.isReady);
+    await Common.wait(() => this._isReady);
     const foundItem = this.items.find((cur) => cur.id === id);
     if (!foundItem) throw Error(ERROR_CODES.NOT_FOUND);
     return foundItem;
@@ -128,27 +137,30 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
 }
 
 export class User implements IUser<User> {
-  service?: IAuthService<User> | undefined;
-  author?: IUser<any> | undefined;
+  service?: IAuthService<User>;
+  creator?: IUser<any> | undefined;
   store?: IStore<User> | undefined;
-  id: string = "";
+  id: string = "newUser";
   label: string = "User";
   createdAt: string = "";
   updatedAt: string = "";
-  authorId = "";
+  creatorId = "";
   username: string = "";
-  role = "subscriber" as const;
+  role = "anonymous" as const;
   authenticated = false;
   constructor(authService?: IAuthService<User>) {
+    console.log("User constructor");
     this.service = authService;
-    this.id = Common.generateID();
-    this.authorId = this.id;
+    this.creatorId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
       username: observable,
       authenticated: observable,
     });
+    if (this.service) {
+      this.isAuthenticated();
+    }
   }
   findUserById(id: string): Promise<User> {
     const user = this.service?.read(id);
@@ -156,12 +168,15 @@ export class User implements IUser<User> {
     return user;
   }
   async isAuthenticated() {
+    console.log("Check if is auth");
     if (this.authenticated) return true;
+    await this.service?.isReady();
     const currentUser = await this.service?.currentUser();
     if (!currentUser) throw Error(ERROR_CODES.NOT_FOUND);
     this.authenticated = true;
     this.username = currentUser?.username;
     this.id = currentUser.id;
+    debugger;
     return true;
   }
   async login(credentials: {
@@ -200,14 +215,14 @@ export class User implements IUser<User> {
     user.username = json.username;
     user.role = json.role;
     user.id = json.id;
-    user.author = json.owner;
+    user.creator = json.creator;
     user.authenticated = json.authenticated;
     return user;
   }
   toJson(consumer: User): any {
     return {
       id: consumer.id,
-      owner: consumer.author,
+      creator: consumer.creator,
       label: consumer.label,
       username: consumer.username,
       authenticated: consumer.authenticated,
@@ -216,35 +231,34 @@ export class User implements IUser<User> {
 }
 
 export class Consumer implements IConsumer<Consumer> {
-  id: string;
+  id: string = "newConsumer";
   label: string = "Consumer";
   createdAt: string;
-  authorId: string;
-  author?: IUser<any>;
+  creatorId: string;
+  creator?: IUser<any>;
   updatedAt: string = "";
   service?: IService<Consumer>;
   constructor(service?: IService<Consumer>) {
     this.service = service;
-    this.id = Common.generateID();
-    this.authorId = this.id;
+    this.creatorId = this.id;
     this.createdAt = new Date().toString();
     this.updatedAt = new Date().toString();
     makeObservable(this, {
       updatedAt: observable,
-      author: observable,
+      creator: observable,
     });
   }
   async fromJson(json: any): Promise<Consumer> {
     const consumer = new Consumer(this.service);
     consumer.id = json.id;
-    consumer.authorId = json.author;
+    consumer.creatorId = json.creator;
     return consumer;
   }
   toJson(consumer: Consumer): any {
     return {
       id: consumer.id,
       label: consumer.label,
-      author: consumer.authorId,
+      creator: consumer.creatorId,
     };
   }
 }

@@ -1,7 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-import { getFirestore, setDoc } from "firebase/firestore";
+import { getFirestore, query, setDoc, where } from "firebase/firestore";
 import {
   collection,
   getDoc,
@@ -16,6 +16,7 @@ import {
   IConsumer,
   IService,
   IUser,
+  User,
 } from "../Models/Common";
 import {
   getAuth,
@@ -23,7 +24,6 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { query, where } from "firebase/firestore";
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -50,11 +50,19 @@ const auth = getAuth(app);
 export class FirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
-  constructor(private factory: T) {
-    this.init();
+  _isReady = false;
+  constructor(private factory: T) {}
+  isReady(): Promise<boolean> {
+    return new Promise(async (res) => {
+      if (this._isReady) res(true);
+      const u = await this.init();
+      if (u) this._isReady = true;
+      res(true);
+    });
   }
   async init() {
     return new Promise((res) => {
+      console.log("Init Service");
       auth.onAuthStateChanged((user) => {
         res(user);
       });
@@ -149,7 +157,7 @@ export class FirebaseAuthService<T extends IUser<T>>
 }
 
 export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
-  constructor(private factory: T) {}
+  constructor(private factory: T, public authUser?: IUser<User>) {}
   async create(item: T): Promise<T> {
     const docRef = doc(collection(db, this.factory.label));
     item.id = docRef.id;
@@ -161,14 +169,13 @@ export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
     throw new Error("Method not implemented.");
   }
   async readAll(ids?: string[] | undefined): Promise<T[]> {
-    const uid = auth.currentUser?.uid;
-    debugger;
-
+    const uid = this.authUser?.id;
     const itemsRef = collection(db, this.factory.label);
 
     const q = query(itemsRef, where("author", "in", [uid]));
 
-    const querySnapshot = await getDocs(collection(db, this.factory.label));
+    const querySnapshot = await getDocs(q);
+
     const items: T[] = [];
     querySnapshot.forEach(async (doc) => {
       const item = await this.factory.fromJson(doc.data());
