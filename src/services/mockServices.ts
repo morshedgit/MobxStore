@@ -5,38 +5,38 @@ import {
   IConsumer,
   IService,
   IUser,
+  LOADING_STATE,
   User,
 } from "../Models/Common";
 
 export class MockFirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
-  _isReady = false;
+  _isReady: LOADING_STATE = LOADING_STATE.LOADING;
   constructor(private factory: T, private isLogged: boolean) {}
   init(): Promise<boolean> {
-    return new Promise(async (res) => {
+    return new Promise(async (res, rej) => {
       try {
-        if (this._isReady) res(true);
-        const u = await this.init();
-        if (u) this._isReady = true;
-        res(true);
-      } catch {
-        res(false);
+        if (this._isReady === LOADING_STATE.READY) res(true);
+        setTimeout(() => {
+          if (this.isLogged) {
+            this._isReady = LOADING_STATE.READY;
+            res(true);
+          } else {
+            rej(ERROR_CODES.NOT_FOUND);
+          }
+        }, 1000);
+      } catch (e) {
+        this._isReady = LOADING_STATE.ERROR;
+        rej(e);
       }
-    });
-  }
-  async init(): Promise<boolean> {
-    return new Promise((res, rej) => {
-      setTimeout(
-        () => (this.isLogged ? res(true) : rej(ERROR_CODES.NOT_FOUND)),
-        1000
-      );
     });
   }
   async signup(credentials: {
     username: string;
     password: string;
   }): Promise<IUser<T>> {
+    await this.init();
     const user = {
       email: credentials.username,
       uid: "TestUser",
@@ -54,6 +54,7 @@ export class MockFirebaseAuthService<T extends IUser<T>>
     username: string;
     password: string;
   }): Promise<IUser<T>> {
+    await this.init();
     const user = {
       email,
       uid: "TestUser",
@@ -67,6 +68,7 @@ export class MockFirebaseAuthService<T extends IUser<T>>
     return loggedUser;
   }
   async logout(): Promise<boolean> {
+    await this.init();
     return true;
   }
   async currentUser(): Promise<IUser<T>> {
@@ -78,16 +80,19 @@ export class MockFirebaseAuthService<T extends IUser<T>>
     });
     return newUser;
   }
-  updateUser(item: IUser<T>): Promise<IUser<T>> {
+  async updateUser(item: IUser<T>): Promise<IUser<T>> {
+    await this.init();
     throw new Error("Method not implemented.");
   }
-  deleteUser(item: IUser<T>): Promise<IUser<T>> {
+  async deleteUser(item: IUser<T>): Promise<IUser<T>> {
+    await this.init();
     throw new Error("Method not implemented.");
   }
   async create(item: T): Promise<T> {
     throw new Error("Method not implemented.");
   }
   async read(id: string): Promise<T> {
+    await this.init();
     const newUser = this.factory.fromJson({
       username: "test@user.com",
       id: "TestUser",
@@ -113,6 +118,7 @@ export class MockFirebaseService<T extends IConsumer<T>>
   implements IService<T>
 {
   items: any[] = [];
+  _isReady: LOADING_STATE = LOADING_STATE.LOADING;
   constructor(
     private factory: T,
     public authUser?: IUser<User>,
@@ -128,6 +134,7 @@ export class MockFirebaseService<T extends IConsumer<T>>
       delete: true,
     }
   ) {}
+  async init() {}
   async create(item: T): Promise<T> {
     if (!this.permissions.create) throw new Error(ERROR_CODES.UNAUTHORIZED);
     item.id = Common.generateID();

@@ -17,6 +17,7 @@ import {
   IConsumer,
   IService,
   IUser,
+  LOADING_STATE,
   User,
 } from "../Models/Common";
 import {
@@ -51,31 +52,27 @@ const auth = getAuth(app);
 export class FirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
-  _isReady = false;
+  _isReady: LOADING_STATE = LOADING_STATE.LOADING;
   constructor(private factory: T) {}
   init(): Promise<boolean> {
     return new Promise(async (res) => {
       try {
-        if (this._isReady) res(true);
-        const u = await this.init();
-        if (u) this._isReady = true;
-        res(true);
+        if (this._isReady === LOADING_STATE.READY) res(true);
+        auth.onAuthStateChanged((user) => {
+          this._isReady = LOADING_STATE.READY;
+          res(true);
+        });
       } catch {
+        this._isReady = LOADING_STATE.ERROR;
         res(false);
       }
-    });
-  }
-  async init() {
-    return new Promise((res) => {
-      auth.onAuthStateChanged((user) => {
-        res(user);
-      });
     });
   }
   async signup(credentials: {
     username: string;
     password: string;
   }): Promise<IUser<T>> {
+    await this.init();
     const userCredential = await createUserWithEmailAndPassword(
       auth,
       credentials.username,
@@ -95,6 +92,7 @@ export class FirebaseAuthService<T extends IUser<T>>
     username: string;
     password: string;
   }): Promise<IUser<T>> {
+    await this.init();
     const userCredential = await signInWithEmailAndPassword(
       auth,
       email,
@@ -110,6 +108,7 @@ export class FirebaseAuthService<T extends IUser<T>>
     return loggedUser;
   }
   async logout(): Promise<boolean> {
+    await this.init();
     await signOut(auth);
     return true;
   }
@@ -145,6 +144,7 @@ export class FirebaseAuthService<T extends IUser<T>>
     throw new Error("Method not implemented.");
   }
   async read(id: string): Promise<T> {
+    await this.init();
     try {
       const userRef = doc(db, `users/${id}`);
       const userSnap = await getDoc(userRef);
@@ -160,8 +160,6 @@ export class FirebaseAuthService<T extends IUser<T>>
       console.log(e.message);
       throw e;
     }
-
-    throw new Error("Method not implemented.");
   }
   readAll(ids?: string[] | undefined): Promise<T[]> {
     throw new Error("Method not implemented.");

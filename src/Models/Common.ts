@@ -133,24 +133,27 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
     return this.items;
   }
   async createItem(item: T): Promise<T> {
+    await this.init();
     const result = await this.service.create(item);
     if (!result) throw Error("SERVICE_ERROR");
     this.items.push(item);
     return result;
   }
   async deleteItem(item: T): Promise<T> {
+    await this.init();
     const result = await this.service.delete(item);
     if (!result) throw Error("SERVICE_ERROR");
     this.items = this.items.filter((cur) => cur.id !== item.id);
     return result;
   }
   async updateItem(item: T): Promise<T> {
+    await this.init();
     const result = await this.service.update(item);
     if (!result) throw Error("SERVICE_ERROR");
     return result;
   }
   async getItem(id: string): Promise<T> {
-    await Common.wait(() => this._isReady);
+    await this.init();
     const foundItem = this.items.find((cur) => cur.id === id);
     if (!foundItem) throw Error(ERROR_CODES.NOT_FOUND);
     return foundItem;
