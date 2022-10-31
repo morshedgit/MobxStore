@@ -11,6 +11,7 @@ import {
   doc,
 } from "firebase/firestore";
 import {
+  Common,
   ERROR_CODES,
   IAuthService,
   IConsumer,
@@ -54,15 +55,18 @@ export class FirebaseAuthService<T extends IUser<T>>
   constructor(private factory: T) {}
   isReady(): Promise<boolean> {
     return new Promise(async (res) => {
-      if (this._isReady) res(true);
-      const u = await this.init();
-      if (u) this._isReady = true;
-      res(true);
+      try {
+        if (this._isReady) res(true);
+        const u = await this.init();
+        if (u) this._isReady = true;
+        res(true);
+      } catch {
+        res(false);
+      }
     });
   }
   async init() {
     return new Promise((res) => {
-      console.log("Init Service");
       auth.onAuthStateChanged((user) => {
         res(user);
       });

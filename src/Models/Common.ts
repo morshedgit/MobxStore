@@ -149,7 +149,6 @@ export class User implements IUser<User> {
   role = "anonymous" as const;
   authenticated = false;
   constructor(authService?: IAuthService<User>) {
-    console.log("User constructor");
     this.service = authService;
     this.creatorId = this.id;
     this.createdAt = new Date().toString();
@@ -168,7 +167,6 @@ export class User implements IUser<User> {
     return user;
   }
   async isAuthenticated() {
-    console.log("Check if is auth");
     if (this.authenticated) return true;
     await this.service?.isReady();
     const currentUser = await this.service?.currentUser();
@@ -176,7 +174,6 @@ export class User implements IUser<User> {
     this.authenticated = true;
     this.username = currentUser?.username;
     this.id = currentUser.id;
-    debugger;
     return true;
   }
   async login(credentials: {
