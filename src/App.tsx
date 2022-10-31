@@ -20,12 +20,13 @@ import { currentUser } from "./Models/User";
 import { categoryStore, userStore } from "./Stores/stores";
 import { UserPage } from "./Pages/Users/UserPage";
 import { UserDetail } from "./Pages/Users/UserDetail";
+import ErrorPage from "./Pages/Error/ErrorPage";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout />,
-    errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+    errorElement: <ErrorPage />,
     children: [
       {
         index: true,
@@ -42,7 +43,7 @@ const router = createBrowserRouter([
   {
     path: "admin",
     element: <AdminLayout />,
-    errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+    errorElement: <ErrorPage />,
     children: [
       {
         index: true,
@@ -53,7 +54,7 @@ const router = createBrowserRouter([
         element: <UserPage store={userStore} />,
         children: [
           {
-            errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+            errorElement: <ErrorPage />,
             children: [
               {
                 path: ":id",
@@ -112,7 +113,7 @@ const router = createBrowserRouter([
         element: <CategoriesPage store={categoryStore} />,
         children: [
           {
-            errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+            errorElement: <ErrorPage />,
             children: [
               {
                 path: ":id",
@@ -120,6 +121,7 @@ const router = createBrowserRouter([
                 loader: async ({ params }) => {
                   if (!params.id && params.id !== "new")
                     throw Error(ERROR_CODES.PARAM_NOT_FOUND);
+                  debugger;
                   const result = await categoryStore.getItem(params.id);
 
                   result.store = categoryStore;
@@ -175,17 +177,15 @@ const router = createBrowserRouter([
       },
     ],
     loader: async () => {
-      try {
-        await currentUser.isAuthenticated();
-      } catch {
-        return redirect("/auth/login?returnUrl=/admin");
-      }
+      const isAuth = await currentUser.isAuthenticated();
+      if (!isAuth) return redirect("/auth/login?returnUrl=/admin");
+      return;
     },
   },
   {
     path: "/auth",
     element: <AuthLayout />,
-    errorElement: <h1 className="text-7xl">ERROR: 404</h1>,
+    errorElement: <ErrorPage />,
     children: [
       {
         path: "logout",
@@ -244,24 +244,22 @@ const router = createBrowserRouter([
     loader: async ({ request }) => {
       const urlSearchParams = new URLSearchParams(request.url);
       const returnUrl = urlSearchParams.get("returnUrl");
-      try {
-        await currentUser.isAuthenticated();
-        if (!returnUrl) return redirect("/");
-        return redirect(`/${returnUrl}`);
-      } catch {
-        return;
-      }
-      // const isLogged = await currentUser.isAuthenticated();
-      // if (!isLogged) return;
-      // if (!returnUrl) return redirect("/");
-      // return redirect(`/${returnUrl}`);
+      const isAuth = await currentUser.isAuthenticated();
+      if (!isAuth) return;
+      if (!returnUrl) return redirect("/");
+      return redirect(`/${returnUrl}`);
     },
   },
+  // {
+  //   path: "error",
+  //   element: <ErrorElment />,
+  //   errorElement: <ErrorPage />,
+  // },
 ]);
 function App() {
+  document.title = import.meta.env.VITE_APP_TITLE;
   return (
     <React.StrictMode>
-      <h1>Hello WOrld</h1>
       <RouterProvider router={router} />
     </React.StrictMode>
   );

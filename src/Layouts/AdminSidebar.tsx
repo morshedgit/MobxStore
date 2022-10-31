@@ -1,6 +1,7 @@
 import { observer } from "mobx-react-lite";
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
+import { currentUser } from "../Models/User";
 
 export const AdminSidebar = observer(() => {
   const [open, setOpen] = useState(false);
@@ -26,32 +27,21 @@ export const AdminSidebar = observer(() => {
               )}
             </NavLink>
           </li>
-          {/* <li>
-            <NavLink
-              to="/admin/ads"
-              className={({ isActive }) => (isActive ? "underline" : "")}
-              end
-            >
-              {open ? (
-                "Ads"
-              ) : (
-                <span className="material-symbols-outlined">feed</span>
-              )}
-            </NavLink>
-          </li> */}
-          <li>
-            <NavLink
-              to="/admin/users"
-              className={({ isActive }) => (isActive ? "underline" : "")}
-              end
-            >
-              {open ? (
-                "Users"
-              ) : (
-                <span className="material-symbols-outlined">group</span>
-              )}
-            </NavLink>
-          </li>
+          {currentUser.role === "admin" && (
+            <li>
+              <NavLink
+                to="/admin/users"
+                className={({ isActive }) => (isActive ? "underline" : "")}
+                end
+              >
+                {open ? (
+                  "Users"
+                ) : (
+                  <span className="material-symbols-outlined">group</span>
+                )}
+              </NavLink>
+            </li>
+          )}
         </ul>
       </nav>
       <button

@@ -32,13 +32,13 @@ import {
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDEPbjTneKWQcvtw7MAnlqyoE-UZjWhUhA",
-  authDomain: "mystartup-4d959.firebaseapp.com",
-  projectId: "mystartup-4d959",
-  storageBucket: "mystartup-4d959.appspot.com",
-  messagingSenderId: "552659198933",
-  appId: "1:552659198933:web:9abfca0d535518e20d135c",
-  measurementId: "G-BLNJFM3BCE",
+  apiKey: import.meta.env.VITE_apiKey,
+  authDomain: import.meta.env.VITE_authDomain,
+  projectId: import.meta.env.VITE_projectId,
+  storageBucket: import.meta.env.VITE_storageBucket,
+  messagingSenderId: import.meta.env.VITE_messagingSenderId,
+  appId: import.meta.env.VITE_appId,
+  measurementId: import.meta.env.VITE_measurementId,
 };
 
 // Initialize Firebase
@@ -53,7 +53,7 @@ export class FirebaseAuthService<T extends IUser<T>>
 {
   _isReady = false;
   constructor(private factory: T) {}
-  isReady(): Promise<boolean> {
+  init(): Promise<boolean> {
     return new Promise(async (res) => {
       try {
         if (this._isReady) res(true);
@@ -101,10 +101,12 @@ export class FirebaseAuthService<T extends IUser<T>>
       password
     );
     const user = userCredential.user;
-    const loggedUser = this.factory.fromJson({
+    const loggedUser = await this.factory.fromJson({
       id: user.uid,
       username: user.email,
     });
+    const userProfile = await this.read(loggedUser.id);
+    loggedUser.role = userProfile.role;
     return loggedUser;
   }
   async logout(): Promise<boolean> {
@@ -115,11 +117,21 @@ export class FirebaseAuthService<T extends IUser<T>>
     await this.init();
     const user = auth.currentUser;
     if (!user) throw Error(ERROR_CODES.NOT_FOUND);
-    const userProfile = await this.read(user.uid);
+    try {
+      const userProfile = await this.read(user.uid);
+      const newUser = this.factory.fromJson({
+        username: user?.email,
+        id: user?.uid,
+        role: userProfile?.role,
+      });
+      return newUser;
+    } catch (e: any) {
+      console.log(e.message);
+    }
     const newUser = this.factory.fromJson({
       username: user?.email,
       id: user?.uid,
-      role: userProfile.role,
+      role: "anonymous",
     });
     return newUser;
   }
@@ -133,16 +145,21 @@ export class FirebaseAuthService<T extends IUser<T>>
     throw new Error("Method not implemented.");
   }
   async read(id: string): Promise<T> {
-    const userRef = doc(db, `users/${id}`);
-    const userSnap = await getDoc(userRef);
-    if (!userSnap.exists()) throw new Error(ERROR_CODES.NOT_FOUND);
-    const user = userSnap.data();
-    const newUser = this.factory.fromJson({
-      username: user?.email,
-      id: user?.uid,
-      role: user?.role,
-    });
-    return newUser;
+    try {
+      const userRef = doc(db, `users/${id}`);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) throw new Error(ERROR_CODES.NOT_FOUND);
+      const user = userSnap.data();
+      const newUser = this.factory.fromJson({
+        username: user?.email,
+        id: user?.uid,
+        role: user?.role,
+      });
+      return newUser;
+    } catch (e: any) {
+      console.log(e.message);
+      throw e;
+    }
 
     throw new Error("Method not implemented.");
   }

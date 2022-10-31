@@ -5,5 +5,4 @@ import { FirebaseService } from "../services/firebase";
 const categoryFactory = new Category(undefined, undefined, currentUser);
 const categoryService = new FirebaseService(categoryFactory);
 export const categoryStore = new Store<Category>(categoryService);
-debugger;
 export const userStore = new Store<User>(new FirebaseService(new User()));

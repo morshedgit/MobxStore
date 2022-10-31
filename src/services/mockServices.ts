@@ -13,7 +13,7 @@ export class MockFirebaseAuthService<T extends IUser<T>>
 {
   _isReady = false;
   constructor(private factory: T, private isLogged: boolean) {}
-  isReady(): Promise<boolean> {
+  init(): Promise<boolean> {
     return new Promise(async (res) => {
       try {
         if (this._isReady) res(true);
@@ -25,7 +25,7 @@ export class MockFirebaseAuthService<T extends IUser<T>>
       }
     });
   }
-  async init() {
+  async init(): Promise<boolean> {
     return new Promise((res, rej) => {
       setTimeout(
         () => (this.isLogged ? res(true) : rej(ERROR_CODES.NOT_FOUND)),
@@ -58,10 +58,12 @@ export class MockFirebaseAuthService<T extends IUser<T>>
       email,
       uid: "TestUser",
     };
-    const loggedUser = this.factory.fromJson({
+    const loggedUser = await this.factory.fromJson({
       id: user.uid,
       username: user.email,
     });
+    const userProfile = await this.read(loggedUser.id);
+    loggedUser.role = userProfile.role;
     return loggedUser;
   }
   async logout(): Promise<boolean> {
@@ -111,17 +113,34 @@ export class MockFirebaseService<T extends IConsumer<T>>
   implements IService<T>
 {
   items: any[] = [];
-  constructor(private factory: T, public authUser?: IUser<User>) {}
+  constructor(
+    private factory: T,
+    public authUser?: IUser<User>,
+    private permissions: {
+      read: boolean;
+      create: boolean;
+      update: boolean;
+      delete: boolean;
+    } = {
+      read: true,
+      create: true,
+      update: true,
+      delete: true,
+    }
+  ) {}
   async create(item: T): Promise<T> {
+    if (!this.permissions.create) throw new Error(ERROR_CODES.UNAUTHORIZED);
     item.id = Common.generateID();
     const jsonData = item.toJson(item);
     this.items.push(jsonData);
     return item;
   }
   read(id: string): Promise<T> {
+    if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
   async readAll(ids?: string[] | undefined): Promise<T[]> {
+    if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
     const uid = this.authUser?.id;
 
     const items: T[] = [];
@@ -136,12 +155,15 @@ export class MockFirebaseService<T extends IConsumer<T>>
     return items;
   }
   async update(item: T): Promise<T> {
+    if (!this.permissions.update) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
   async delete(item: T): Promise<T> {
+    if (!this.permissions.delete) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
   find(query: { key: string; value: any }[]): Promise<T | undefined> {
+    if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
 }
