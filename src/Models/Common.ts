@@ -102,18 +102,14 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
     makeObservable(this, {
       items: observable.struct,
     });
-    this.init()
-      .then(() => {
-        console.log(`Store ${this.items[0].label} is ready`);
-      })
-      .catch(() => {
-        console.log(`Store is not ready`);
-      });
   }
   async init(): Promise<boolean> {
     return new Promise(async (res, rej) => {
       try {
         if (this._isReady === LOADING_STATE.READY) res(true);
+        // if (this._isReady === LOADING_STATE.ERROR) {
+        //   throw new Error(ERROR_CODES.SERVICE_ERROR);
+        // }
         const items = await this.service.readAll();
 
         this.items = items.map((item) => {
@@ -135,21 +131,18 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
   async createItem(item: T): Promise<T> {
     await this.init();
     const result = await this.service.create(item);
-    if (!result) throw Error("SERVICE_ERROR");
     this.items.push(item);
     return result;
   }
   async deleteItem(item: T): Promise<T> {
     await this.init();
     const result = await this.service.delete(item);
-    if (!result) throw Error("SERVICE_ERROR");
     this.items = this.items.filter((cur) => cur.id !== item.id);
     return result;
   }
   async updateItem(item: T): Promise<T> {
     await this.init();
     const result = await this.service.update(item);
-    if (!result) throw Error("SERVICE_ERROR");
     return result;
   }
   async getItem(id: string): Promise<T> {
