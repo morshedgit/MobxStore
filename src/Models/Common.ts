@@ -36,7 +36,7 @@ export interface IConsumer<T extends IConsumer<T>> {
   toJson: (consumer: T) => any;
 }
 
-type UserRole = "admin" | "subscriber" | "anonymous";
+export type UserRole = "admin" | "subscriber" | "anonymous";
 
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
@@ -124,7 +124,7 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
       }
     });
   }
-  async getItems(t?: number): Promise<T[]> {
+  async getItems(): Promise<T[]> {
     await this.init();
     return this.items;
   }
@@ -174,9 +174,6 @@ export class User implements IUser<User> {
       username: observable,
       authenticated: observable,
     });
-    if (this.service) {
-      this.isAuthenticated();
-    }
   }
   findUserById(id: string): Promise<User> {
     const user = this.service?.read(id);
@@ -185,7 +182,6 @@ export class User implements IUser<User> {
   }
   async isAuthenticated() {
     if (this.authenticated) return true;
-    await this.service?.init();
     try {
       const currentUser = await this.service?.currentUser();
       if (!currentUser) return false;

@@ -7,93 +7,132 @@ import {
   NotImplementedMockService,
 } from "./services/mockServices";
 
-test("if user is not logged", async () => {
-  const user = new User(new MockFirebaseAuthService(new User(), false));
-  expect(user.id).toBe("newUser");
-  expect(user.authenticated).toBe(false);
-  expect(user.role).toBe("anonymous");
-  const isAuth = await user.isAuthenticated();
-  expect(isAuth).toBe(false);
-});
-test("if user is logged", async () => {
-  const user = new User(new MockFirebaseAuthService(new User(), true));
-  expect(user.id).toBe("newUser");
-  expect(user.authenticated).toBe(false);
-  expect(user.role).toBe("anonymous");
-  const isAuth = await user.isAuthenticated();
-  expect(isAuth).toBe(true);
-  expect(user.role).toBe("subscriber");
-});
-test("if could log in", async () => {
-  const user = new User(new MockFirebaseAuthService(new User(), false));
-  expect(user.id).toBe("newUser");
-  expect(user.authenticated).toBe(false);
-  expect(user.role).toBe("anonymous");
-  const loginResult = await user.login({
-    username: "navid@email.com",
-    password: "123456",
+describe("AuthService Class", () => {
+  describe("login", () => {
+    test("if login works", async () => {
+      const authService = new MockFirebaseAuthService(new User(), true);
+      const user = await authService.login({
+        username: "navid@email.com",
+        password: "123456",
+      });
+      expect(user.username).toBe("navid@email.com");
+      expect(user.role).toBe("subscriber");
+    });
+    test("if login fails when user is not registered", async () => {
+      const authService = new MockFirebaseAuthService(new User(), true);
+      await authService
+        .login({
+          username: "notRegisteredUser@email.com",
+          password: "123456",
+        })
+        .catch((e) => expect(e).toBe(ERROR_CODES.NOT_FOUND));
+    });
+    test("if login succeeds when user is registered but profile not found", async () => {
+      const authService = new MockFirebaseAuthService(new User(), true);
+      const user = await authService.login({
+        username: "omid@email.com",
+        password: "123456",
+      });
+      expect(user.username).toBe("omid@email.com");
+      expect(user.role).toBe("anonymous");
+    });
   });
-  expect(user.id).toBe("TestUser");
-  expect(user.username).toBe("navid@email.com");
-  expect(user.authenticated).toBe(true);
-  expect(user.role).toBe("subscriber");
+});
+
+describe("User Class", () => {
+  describe("authentication", () => {
+    test("if user is not authenticated when user is not logged ", async () => {
+      const user = new User(new MockFirebaseAuthService(new User(), false));
+      expect(user.id).toBe("newUser");
+      expect(user.authenticated).toBe(false);
+      expect(user.role).toBe("anonymous");
+      await user.isAuthenticated().then((result) => expect(result).toBe(false));
+    });
+    test("if user is authenticated when user is logged", async () => {
+      const user = new User(new MockFirebaseAuthService(new User(), true));
+      expect(user.id).toBe("newUser");
+      expect(user.authenticated).toBe(false);
+      expect(user.role).toBe("anonymous");
+      await user.isAuthenticated().then((result) => {
+        expect(result).toBe(true);
+        expect(user.role).toBe("subscriber");
+      });
+    });
+    test("if user is authenticate after successful log in", async () => {
+      const user = new User(new MockFirebaseAuthService(new User(), true));
+      expect(user.id).toBe("newUser");
+      expect(user.authenticated).toBe(false);
+      expect(user.role).toBe("anonymous");
+      const loginResult = await user
+        .login({
+          username: "navid@email.com",
+          password: "123456",
+        })
+        .then(() => {
+          expect(user.id).toBe("user1");
+          expect(user.username).toBe("navid@email.com");
+          expect(user.authenticated).toBe(true);
+          expect(user.role).toBe("subscriber");
+        });
+    });
+  });
 });
 
 describe("Store Class", () => {
   describe("How Store  handles service not implemented error", () => {
     const store = new Store(new NotImplementedMockService<Category>());
     test("if getting items from store fails if store service is not implemented correctly", async () => {
-      expect(async () => await store.getItems()).rejects.toThrow(
-        "Method not implemented."
-      );
+      await store
+        .getItems()
+        .catch((e) => expect(e.message).toBe("Method not implemented."));
     });
     test("if getting item from store fails if store service is not implemented correctly", async () => {
-      expect(async () => await store.getItem("xyz")).rejects.toThrow(
-        "Method not implemented."
-      );
+      await store
+        .getItem("xyz")
+        .catch((e) => expect(e.message).toBe("Method not implemented."));
     });
     test("if calling create item from store fails if store service is not implemented correctly", async () => {
-      expect(
-        async () => await store.createItem(new Category())
-      ).rejects.toThrow("Method not implemented.");
+      await store
+        .createItem(new Category())
+        .catch((e) => expect(e.message).toBe("Method not implemented."));
     });
     test("if calling update item from store fails if store service is not implemented correctly", async () => {
-      expect(
-        async () => await store.updateItem(new Category())
-      ).rejects.toThrow("Method not implemented.");
+      await store
+        .updateItem(new Category())
+        .catch((e) => expect(e.message).toBe("Method not implemented."));
     });
     test("if calling delete item from store fails if store service is not implemented correctly", async () => {
-      expect(
-        async () => await store.deleteItem(new Category())
-      ).rejects.toThrow("Method not implemented.");
+      await store
+        .deleteItem(new Category())
+        .catch((e) => expect(e.message).toBe("Method not implemented."));
     });
   });
   describe("How Store  handles service not connecting error", () => {
     const store = new Store(new NotConnectingMockService<Category>());
     test("if getting items from store fails if store service is not connecting", async () => {
-      expect(async () => await store.getItems()).rejects.toThrow(
-        ERROR_CODES.SERVICE_ERROR
-      );
+      await store
+        .getItems()
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.SERVICE_ERROR));
     });
     test("if getting item from store fails if store service is not connecting", async () => {
-      expect(async () => await store.getItem("xyz")).rejects.toThrow(
-        ERROR_CODES.SERVICE_ERROR
-      );
+      await store
+        .getItem("xyz")
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.SERVICE_ERROR));
     });
     test("if calling create item from store fails if store service is not connecting", async () => {
-      expect(
-        async () => await store.createItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.SERVICE_ERROR);
+      await store
+        .createItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.SERVICE_ERROR));
     });
     test("if calling update item from store fails if store service is not connecting", async () => {
-      expect(
-        async () => await store.updateItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.SERVICE_ERROR);
+      await store
+        .updateItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.SERVICE_ERROR));
     });
     test("if calling delete item from store fails if store service is not connecting", async () => {
-      expect(
-        async () => await store.deleteItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.SERVICE_ERROR);
+      await store
+        .deleteItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.SERVICE_ERROR));
     });
   });
   describe("How Store handles service unauthorized error", () => {
@@ -106,9 +145,9 @@ describe("Store Class", () => {
           delete: true,
         })
       );
-      expect(async () => await store.getItems()).rejects.toThrow(
-        ERROR_CODES.UNAUTHORIZED
-      );
+      await store
+        .getItems()
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.UNAUTHORIZED));
     });
     test("if getting item from store fails if store user is not authorized to read items", async () => {
       const store = new Store(
@@ -119,9 +158,9 @@ describe("Store Class", () => {
           delete: true,
         })
       );
-      expect(async () => await store.getItem("xyz")).rejects.toThrow(
-        ERROR_CODES.UNAUTHORIZED
-      );
+      await store
+        .getItem("xyz")
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.UNAUTHORIZED));
     });
     test("if calling create item from store fails if store user is not authorized to create item", async () => {
       const store = new Store(
@@ -132,9 +171,9 @@ describe("Store Class", () => {
           delete: true,
         })
       );
-      expect(
-        async () => await store.createItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.UNAUTHORIZED);
+      await store
+        .createItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.UNAUTHORIZED));
     });
     test("if calling update item from store fails if store user is not authorized to update item", async () => {
       const store = new Store(
@@ -145,9 +184,9 @@ describe("Store Class", () => {
           delete: true,
         })
       );
-      expect(
-        async () => await store.updateItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.UNAUTHORIZED);
+      await store
+        .updateItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.UNAUTHORIZED));
     });
     test("if calling delete item from store fails if store user is not authorized to delete item", async () => {
       const store = new Store(
@@ -158,9 +197,9 @@ describe("Store Class", () => {
           delete: false,
         })
       );
-      expect(
-        async () => await store.deleteItem(new Category())
-      ).rejects.toThrow(ERROR_CODES.UNAUTHORIZED);
+      await store
+        .deleteItem(new Category())
+        .catch((e) => expect(e.message).toBe(ERROR_CODES.UNAUTHORIZED));
     });
   });
   describe("How store allows public access", () => {

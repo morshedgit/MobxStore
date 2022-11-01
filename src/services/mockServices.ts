@@ -9,17 +9,36 @@ import {
   User,
 } from "../Models/Common";
 
+const registeredUsers = [
+  {
+    uid: "user1",
+    email: "navid@email.com",
+    password: "123456",
+  },
+  {
+    uid: "user2",
+    email: "omid@email.com",
+    password: "123456",
+  },
+];
+const userProfiles = [
+  {
+    uid: "user1",
+    email: "navid@email.com",
+    role: "subscriber",
+  },
+];
 export class MockFirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
   _isReady: LOADING_STATE = LOADING_STATE.LOADING;
-  constructor(private factory: T, private isLogged: boolean) {}
+  constructor(private factory: T, private isServiceAvailable: boolean) {}
   init(): Promise<boolean> {
     return new Promise(async (res, rej) => {
       try {
         if (this._isReady === LOADING_STATE.READY) res(true);
         setTimeout(() => {
-          if (this.isLogged) {
+          if (this.isServiceAvailable) {
             this._isReady = LOADING_STATE.READY;
             res(true);
           } else {
@@ -55,16 +74,20 @@ export class MockFirebaseAuthService<T extends IUser<T>>
     password: string;
   }): Promise<IUser<T>> {
     await this.init();
-    const user = {
-      email,
-      uid: "TestUser",
-    };
+    const user = registeredUsers.find(
+      (u) => u.email === email && u.password === password
+    );
+    // console.log(user);
+    if (!user) throw ERROR_CODES.NOT_FOUND;
     const loggedUser = await this.factory.fromJson({
       id: user.uid,
       username: user.email,
     });
-    const userProfile = await this.read(loggedUser.id);
-    loggedUser.role = userProfile.role;
+    const userProfile = await this.read(loggedUser.id)
+      .then((u) => u)
+      .catch(() => undefined);
+
+    loggedUser.role = userProfile ? userProfile.role : "anonymous";
     return loggedUser;
   }
   async logout(): Promise<boolean> {
@@ -93,10 +116,12 @@ export class MockFirebaseAuthService<T extends IUser<T>>
   }
   async read(id: string): Promise<T> {
     await this.init();
+    const userProfile = userProfiles.find((u) => u.uid === id);
+    if (!userProfile) throw ERROR_CODES.NOT_FOUND;
     const newUser = this.factory.fromJson({
-      username: "test@user.com",
-      id: "TestUser",
-      role: "subscriber",
+      username: userProfile.email,
+      id: userProfile.uid,
+      role: userProfile.role,
     });
     return newUser;
   }
@@ -226,7 +251,7 @@ export class NotConnectingMockService<T extends IConsumer<T>>
       if (this._isReady === LOADING_STATE.READY) res(true);
       setTimeout(() => {
         this._isReady = LOADING_STATE.ERROR;
-        rej(ERROR_CODES.SERVICE_ERROR);
+        rej(Error(ERROR_CODES.SERVICE_ERROR));
       }, 1000);
     });
   }
