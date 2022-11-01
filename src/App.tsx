@@ -110,7 +110,7 @@ const router = createBrowserRouter([
       },
       {
         path: "categories",
-        element: <CategoriesPage store={categoryStore} />,
+        element: <CategoriesPage />,
         children: [
           {
             errorElement: <ErrorPage />,
@@ -121,9 +121,7 @@ const router = createBrowserRouter([
                 loader: async ({ params }) => {
                   if (!params.id && params.id !== "new")
                     throw Error(ERROR_CODES.PARAM_NOT_FOUND);
-                  debugger;
                   const result = await categoryStore.getItem(params.id);
-
                   result.store = categoryStore;
                   return result;
                 },
@@ -174,6 +172,10 @@ const router = createBrowserRouter([
             ],
           },
         ],
+        loader: async () => {
+          await categoryStore.init();
+          return categoryStore;
+        },
       },
     ],
     loader: async () => {

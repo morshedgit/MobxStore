@@ -103,8 +103,10 @@ export class FirebaseAuthService<T extends IUser<T>>
       id: user.uid,
       username: user.email,
     });
-    const userProfile = await this.read(loggedUser.id);
-    loggedUser.role = userProfile.role;
+    const userProfile = await this.read(loggedUser.id)
+      .then((u) => u)
+      .catch((e) => undefined);
+    loggedUser.role = userProfile ? userProfile.role : "anonymous";
     return loggedUser;
   }
   async logout(): Promise<boolean> {
@@ -116,21 +118,13 @@ export class FirebaseAuthService<T extends IUser<T>>
     await this.init();
     const user = auth.currentUser;
     if (!user) throw Error(ERROR_CODES.NOT_FOUND);
-    try {
-      const userProfile = await this.read(user.uid);
-      const newUser = this.factory.fromJson({
-        username: user?.email,
-        id: user?.uid,
-        role: userProfile?.role,
-      });
-      return newUser;
-    } catch (e: any) {
-      console.log(e.message);
-    }
+    const userProfile = await this.read(user.uid)
+      .then((u) => u)
+      .catch((e) => undefined);
     const newUser = this.factory.fromJson({
       username: user?.email,
       id: user?.uid,
-      role: "anonymous",
+      role: userProfile ? userProfile.role : "anonymous",
     });
     return newUser;
   }
@@ -150,10 +144,11 @@ export class FirebaseAuthService<T extends IUser<T>>
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) throw new Error(ERROR_CODES.NOT_FOUND);
       const user = userSnap.data();
-      const newUser = this.factory.fromJson({
-        username: user?.email,
+      const newUser = await this.factory.fromJson({
+        username: user?.username,
         id: user?.uid,
         role: user?.role,
+        creatorId: user?.creator,
       });
       return newUser;
     } catch (e: any) {
@@ -188,10 +183,16 @@ export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
     throw new Error("Method not implemented.");
   }
   async readAll(ids?: string[] | undefined): Promise<T[]> {
-    const uid = this.authUser?.id;
+    const isAuth = await this.authUser?.isAuthenticated();
+    const userId = this.authUser?.id;
+    if (!isAuth) return [];
     const itemsRef = collection(db, this.factory.label);
-
-    const q = query(itemsRef, where("author", "in", [uid]));
+    let q;
+    if (this.authUser?.role === "admin") {
+      q = query(itemsRef);
+    } else {
+      q = query(itemsRef, where("author", "in", [userId]));
+    }
 
     const querySnapshot = await getDocs(q);
 

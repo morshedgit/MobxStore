@@ -43,6 +43,7 @@ export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   role: UserRole;
   authenticated: boolean;
   service?: IAuthService<T>;
+  isAuthenticated(): Promise<boolean>;
   login(credentials: { username: string; password: string }): Promise<T>;
   logout(): Promise<boolean>;
   signup(credentials: { username: string; password: string }): Promise<T>;
@@ -231,14 +232,14 @@ export class User implements IUser<User> {
     user.username = json.username;
     user.role = json.role;
     user.id = json.id;
-    user.creator = json.creator;
+    user.creatorId = json.creator;
     user.authenticated = json.authenticated;
     return user;
   }
   toJson(consumer: User): any {
     return {
       id: consumer.id,
-      creator: consumer.creator,
+      creator: consumer.creatorId,
       label: consumer.label,
       username: consumer.username,
       authenticated: consumer.authenticated,
