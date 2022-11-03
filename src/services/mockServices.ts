@@ -7,6 +7,7 @@ import {
   IUser,
   LOADING_STATE,
   User,
+  UserRole,
 } from "../Models/Common";
 
 const registeredUsers = [
@@ -20,14 +21,170 @@ const registeredUsers = [
     email: "omid@email.com",
     password: "123456",
   },
+  {
+    uid: "admin",
+    email: "admin@email.com",
+    password: "123456",
+  },
+  {
+    uid: "LpCZxJdRCAfDoB7wKNTsU13pKUV2",
+    email: "sina@email.com",
+    password: "123456",
+  },
+  {
+    uid: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    email: "kian@email.com",
+    password: "123456",
+  },
 ];
 const userProfiles = [
   {
-    uid: "user1",
-    email: "navid@email.com",
+    uid: "admin",
+    email: "admin@email.com",
+    role: "admin",
+  },
+  {
+    uid: "LpCZxJdRCAfDoB7wKNTsU13pKUV2",
+    email: "sina@email.com",
+    role: "admin",
+  },
+  {
+    uid: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    email: "kian@email.com",
     role: "subscriber",
   },
 ];
+const categories = [
+  {
+    creator: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    title: "Animals",
+    description: "animals",
+    createdAt: "Tue Nov 01 2022 18:54:24 GMT-0700 (Pacific Daylight Time)",
+    id: "7M9VuxDmVPlu1mtkUAkz",
+    updatedAt: "Tue Nov 01 2022 18:54:24 GMT-0700 (Pacific Daylight Time)",
+  },
+  {
+    title: "Books",
+    id: "F4bKRg1jHYdmes0L5ZqM",
+    createdAt: "Tue Nov 01 2022 18:55:23 GMT-0700 (Pacific Daylight Time)",
+    creator: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    updatedAt: "Tue Nov 01 2022 18:55:23 GMT-0700 (Pacific Daylight Time)",
+    description: "Old books",
+  },
+  {
+    createdAt: "Tue Nov 01 2022 17:25:43 GMT-0700 (Pacific Daylight Time)",
+    description: "by sina",
+    updatedAt: "Tue Nov 01 2022 17:25:43 GMT-0700 (Pacific Daylight Time)",
+    title: "Phones",
+    creator: "LpCZxJdRCAfDoB7wKNTsU13pKUV2",
+    id: "GvaHEJdrzcyM4kYP7uTe",
+  },
+  {
+    updatedAt: "Tue Nov 01 2022 17:25:55 GMT-0700 (Pacific Daylight Time)",
+    title: "Digitals",
+    creator: "LpCZxJdRCAfDoB7wKNTsU13pKUV2",
+    description: "by sina",
+    id: "cdx97c1ZirlOLa6RlUCg",
+    createdAt: "Tue Nov 01 2022 17:25:55 GMT-0700 (Pacific Daylight Time)",
+  },
+  {
+    creator: "LpCZxJdRCAfDoB7wKNTsU13pKUV2",
+    updatedAt: "Tue Nov 01 2022 17:26:05 GMT-0700 (Pacific Daylight Time)",
+    createdAt: "Tue Nov 01 2022 17:26:05 GMT-0700 (Pacific Daylight Time)",
+    id: "j4CJhjbDPvWDYQ8MOlPv",
+    title: "TVs ",
+    description: "by sina",
+  },
+  {
+    description: "by kian",
+    title: "Boats",
+    creator: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    updatedAt: "Tue Nov 01 2022 17:27:00 GMT-0700 (Pacific Daylight Time)",
+    createdAt: "Tue Nov 01 2022 17:27:00 GMT-0700 (Pacific Daylight Time)",
+    id: "lhDOFWXVXCZsOzuSWcwA",
+  },
+  {
+    creator: "VK8DACLF61NQqe4eBwiLsiOzT3y1",
+    id: "zjw2M9SOECmYL1xfIqb6",
+    createdAt: "Tue Nov 01 2022 17:26:44 GMT-0700 (Pacific Daylight Time)",
+    description: "by kian",
+    title: "Cars",
+    updatedAt: "Tue Nov 01 2022 17:26:44 GMT-0700 (Pacific Daylight Time)",
+  },
+];
+enum Roles {
+  SUBSCRIBER = "subscriber",
+  ANONYMOUS = "anonymous",
+  ADMIN = "admin",
+  EDITOR = "editor",
+  CREATOR = "creator",
+}
+
+type Permissions = {
+  read: boolean;
+  write: boolean;
+};
+
+const RolePermissionMap: Record<UserRole, Permissions> = {
+  [Roles.ADMIN]: {
+    read: true,
+    write: true,
+  },
+  [Roles.ANONYMOUS]: {
+    read: true,
+    write: false,
+  },
+  [Roles.SUBSCRIBER]: {
+    read: true,
+    write: false,
+  },
+  [Roles.EDITOR]: {
+    read: true,
+    write: true,
+  },
+  [Roles.CREATOR]: {
+    read: true,
+    write: true,
+  },
+};
+
+type UserGroup = {
+  [id: string]: {
+    role: UserRole[];
+  };
+};
+// Querying resources with user id xxxx.
+// First checks the user id belongs to a policy
+/**
+ * GOALS:
+ * - Allow a user to query resources based on permissions
+ * - A resource should be accessible by public, creator, admin, team members
+ * - A resource only have creator id
+ */
+const designTeam: UserGroup = {
+  user1ID: {
+    role: [Roles.SUBSCRIBER, Roles.EDITOR, Roles.CREATOR],
+  },
+  user2ID: {
+    role: [Roles.SUBSCRIBER],
+  },
+};
+type AccessPolicy = UserGroup[];
+
+type ResourceType = "Category";
+const resources: Record<
+  ResourceType,
+  {
+    acl: AccessPolicy; // author, admin, group
+    data: any[];
+  }
+> = {
+  Category: {
+    acl: [designTeam],
+    data: categories,
+  },
+};
+
 export class MockFirebaseAuthService<T extends IUser<T>>
   implements IAuthService<T>
 {
@@ -125,7 +282,7 @@ export class MockFirebaseAuthService<T extends IUser<T>>
     });
     return newUser;
   }
-  readAll(ids?: string[] | undefined): Promise<T[]> {
+  readAll(protectionLevel: UserRole = "anonymous"): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
   update(item: T): Promise<T> {
@@ -146,18 +303,7 @@ export class MockFirebaseService<T extends IConsumer<T>>
   _isReady: LOADING_STATE = LOADING_STATE.LOADING;
   constructor(
     private factory: T,
-    public authUser?: IUser<User>,
-    private permissions: {
-      read: boolean;
-      create: boolean;
-      update: boolean;
-      delete: boolean;
-    } = {
-      read: true,
-      create: true,
-      update: true,
-      delete: true,
-    }
+    public authUser?: IUser<User> // private permissions: { //   read: boolean; //   create: boolean; //   update: boolean; //   delete: boolean; // } = { //   read: true, //   create: true, //   update: true, //   delete: true, // }
   ) {}
   async init() {
     return new Promise((res, rej) => {
@@ -186,35 +332,44 @@ export class MockFirebaseService<T extends IConsumer<T>>
     if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
-  async readAll(ids?: string[] | undefined): Promise<T[]> {
+  async readAll(): Promise<T[]> {
     await this.init();
-    if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
+    const resourceType = this.factory.label as ResourceType;
+    const readRoles = resources[resourceType].acl.read;
+    if (
+      readRoles.length === 0 ||
+      (this.authUser?.role && this.authUser.role in readRoles)
+    ) {
+      return Promise.all(
+        resources[resourceType].data.map((r) => this.factory.fromJson(r))
+      );
+    }
+
     const uid = this.authUser?.id;
 
-    const items: T[] = [];
-    this.items
-      // .filter((item) => item.author === uid)
-      .forEach(async (doc) => {
-        const item = await this.factory.fromJson(doc);
-        item.id = doc.id;
-        items.push(item);
-      });
+    if (this.authUser?.role && this.authUser.role in readRoles) {
+    }
 
-    return items;
+    // const items: T[] = [];
+    //   // .filter((item) => item.author === uid)
+    //   .forEach(async (doc) => {
+    //     const item = await this.factory.fromJson(doc);
+    //     item.id = doc.id;
+    //     items.push(item);
+    //   });
+
+    // return items;
   }
   async update(item: T): Promise<T> {
     await this.init();
-    if (!this.permissions.update) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
   async delete(item: T): Promise<T> {
     await this.init();
-    if (!this.permissions.delete) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
   async find(query: { key: string; value: any }[]): Promise<T | undefined> {
     await this.init();
-    if (!this.permissions.read) throw new Error(ERROR_CODES.UNAUTHORIZED);
     throw new Error("Method not implemented.");
   }
 }
@@ -228,7 +383,7 @@ export class NotImplementedMockService<T extends IConsumer<T>>
   read(id: string): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  readAll(ids?: string[] | undefined): Promise<T[]> {
+  readAll(protectionLevel: UserRole = "anonymous"): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
   update(item: T): Promise<T> {
@@ -263,7 +418,7 @@ export class NotConnectingMockService<T extends IConsumer<T>>
     await this.init();
     throw new Error("Method not implemented.");
   }
-  async readAll(ids?: string[] | undefined): Promise<T[]> {
+  async readAll(protectionLevel: UserRole = "anonymous"): Promise<T[]> {
     await this.init();
     throw new Error("Method not implemented.");
   }

@@ -22,8 +22,8 @@ export const CategoriesPage = observer(() => {
         className={`flex-grow flex-col ${isHidden ? "hidden" : "flex"} md:flex`}
       >
         <h2 className="text-2xl w-full border-b-2 border-sky-200 flex items-center justify-between">
-          <Link to="/admin/categories">Categories</Link>
-          <Link to="/admin/categories/new">
+          <Link to="/categories">Categories</Link>
+          <Link to="/categories/new">
             <span className="material-symbols-outlined">add</span>
           </Link>
         </h2>
@@ -74,7 +74,7 @@ export const CategoriesPage = observer(() => {
                   onClick={async (e) => {
                     e.preventDefault();
                     await categoryStore.deleteItem(item);
-                    navigate("/admin/categories");
+                    navigate("/categories");
                   }}
                 >
                   <span className="material-symbols-outlined">delete</span>

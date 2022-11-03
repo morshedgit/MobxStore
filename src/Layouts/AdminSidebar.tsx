@@ -14,19 +14,6 @@ export const AdminSidebar = observer(() => {
     >
       <nav>
         <ul className={`flex flex-col ${open ? "" : "items-center"}`}>
-          <li>
-            <NavLink
-              to="/admin/categories"
-              className={({ isActive }) => (isActive ? "underline" : "")}
-              end
-            >
-              {open ? (
-                "Categories"
-              ) : (
-                <span className="material-symbols-outlined">category</span>
-              )}
-            </NavLink>
-          </li>
           {currentUser.role === "admin" && (
             <li>
               <NavLink

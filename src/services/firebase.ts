@@ -19,6 +19,7 @@ import {
   IUser,
   LOADING_STATE,
   User,
+  UserRole,
 } from "../Models/Common";
 import {
   getAuth,
@@ -41,7 +42,6 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_appId,
   measurementId: import.meta.env.VITE_measurementId,
 };
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
@@ -156,7 +156,7 @@ export class FirebaseAuthService<T extends IUser<T>>
       throw e;
     }
   }
-  readAll(ids?: string[] | undefined): Promise<T[]> {
+  readAll(protectionLevel?: UserRole): Promise<T[]> {
     throw new Error("Method not implemented.");
   }
   update(item: T): Promise<T> {
@@ -182,27 +182,30 @@ export class FirebaseService<T extends IConsumer<T>> implements IService<T> {
   read(id: string): Promise<T> {
     throw new Error("Method not implemented.");
   }
-  async readAll(ids?: string[] | undefined): Promise<T[]> {
+  async readAll(protectionLevel: UserRole = "anonymous"): Promise<T[]> {
     const isAuth = await this.authUser?.isAuthenticated();
     const userId = this.authUser?.id;
-    if (!isAuth) return [];
-    const itemsRef = collection(db, this.factory.label);
+    const documentRef = collection(db, this.factory.label);
     let q;
-    if (this.authUser?.role === "admin") {
-      q = query(itemsRef);
+    if (protectionLevel === "admin" && this.authUser?.role === "admin") {
+      q = query(documentRef);
+    } else if (protectionLevel === "subscriber" && isAuth) {
+      q = query(documentRef, where("creator", "in", [userId]));
     } else {
-      q = query(itemsRef, where("author", "in", [userId]));
+      q = query(documentRef);
     }
 
     const querySnapshot = await getDocs(q);
 
     const items: T[] = [];
+    const jsonItems: any[] = [];
     querySnapshot.forEach(async (doc) => {
+      jsonItems.push(doc.data());
       const item = await this.factory.fromJson(doc.data());
       item.id = doc.id;
       items.push(item);
     });
-
+    console.log(jsonItems);
     return items;
   }
   async update(item: T): Promise<T> {

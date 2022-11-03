@@ -39,7 +39,7 @@ export const CategoryForm = observer((props: { category?: Category }) => {
             <label htmlFor="ownerId">Owner</label>
             <select
               id="ownerId"
-              defaultValue={props.category.creator.id}
+              defaultValue={props.category.creatorId}
               name="ownerId"
               className="form-input"
               required

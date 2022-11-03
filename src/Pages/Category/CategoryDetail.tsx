@@ -17,26 +17,24 @@ export const CategoryDetail = observer(
       <section className="w-full md:w-[80%]">
         <div className="flex justify-between  w-full border-b-2 border-sky-200">
           <h2 className="text-2xl">
-            <Link to="/admin/categories">Categories</Link>
+            <Link to="/categories">Categories</Link>
             {category?.id && (
-              <Link to={`/admin/categories/${category.id}`}>
-                / {category.title}
-              </Link>
+              <Link to={`/categories/${category.id}`}>/ {category.title}</Link>
             )}
           </h2>
 
           {props.mode === "VIEW" && (
-            <Link to={`/admin/categories/${category.id}/edit`}>
+            <Link to={`/categories/${category.id}/edit`}>
               <span className="material-symbols-outlined">edit</span>
             </Link>
           )}
           {props.mode === "EDIT" && (
-            <Link to={`/admin/categories/${category.id}`}>
+            <Link to={`/categories/${category.id}`}>
               <span className="material-symbols-outlined">close</span>
             </Link>
           )}
           {props.mode === "NEW" && (
-            <Link to={`/admin/categories`}>
+            <Link to={`/categories`}>
               <span className="material-symbols-outlined">close</span>
             </Link>
           )}

@@ -32,6 +32,75 @@ const router = createBrowserRouter([
         index: true,
         element: <h2 className="text-2xl">Home Page</h2>,
       },
+      {
+        path: "categories",
+        element: <CategoriesPage />,
+        children: [
+          {
+            errorElement: <ErrorPage />,
+            children: [
+              {
+                path: ":id",
+                element: <CategoryDetail mode="VIEW" />,
+                loader: async ({ params }) => {
+                  if (!params.id && params.id !== "new")
+                    throw Error(ERROR_CODES.PARAM_NOT_FOUND);
+                  const result = await categoryStore.getItem(params.id);
+                  result.store = categoryStore;
+                  return result;
+                },
+              },
+              {
+                path: ":id/edit",
+                element: <CategoryDetail mode="EDIT" />,
+                loader: async ({ params }) => {
+                  if (!params.id) throw Error(ERROR_CODES.PARAM_NOT_FOUND);
+                  const result = await categoryStore.getItem(params.id);
+
+                  result.store = categoryStore;
+                  return result;
+                },
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const data = Object.fromEntries(formData.entries());
+                  const id = data.catID as string;
+                  const category = await categoryStore.getItem(id);
+                  category.update({
+                    title: data.title as string,
+                    description: data.description as string,
+                    ownerId: data.ownerId as string,
+                  });
+                  return redirect(`/categories/${id}`);
+                },
+              },
+              {
+                path: "new",
+                element: <CategoryDetail mode="NEW" />,
+                action: async ({ request }) => {
+                  const formData = await request.formData();
+                  const { title, description } = Object.fromEntries(
+                    formData
+                  ) as {
+                    title: string;
+                    description: string;
+                  };
+                  const newCategory = new Category();
+                  newCategory.title = title;
+                  newCategory.description = description;
+                  newCategory.creatorId = currentUser.id;
+                  await categoryStore.createItem(newCategory);
+
+                  return redirect(`/categories/${newCategory.id}`);
+                },
+              },
+            ],
+          },
+        ],
+        loader: async () => {
+          await categoryStore.init();
+          return categoryStore;
+        },
+      },
     ],
     // loader: async () => {
     //   const isLogged = await currentUser.isAuthenticated();
@@ -47,7 +116,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Navigate to="categories" />,
+        element: <Navigate to="users" />,
       },
       {
         path: "users",
@@ -108,79 +177,14 @@ const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: "categories",
-        element: <CategoriesPage />,
-        children: [
-          {
-            errorElement: <ErrorPage />,
-            children: [
-              {
-                path: ":id",
-                element: <CategoryDetail mode="VIEW" />,
-                loader: async ({ params }) => {
-                  if (!params.id && params.id !== "new")
-                    throw Error(ERROR_CODES.PARAM_NOT_FOUND);
-                  const result = await categoryStore.getItem(params.id);
-                  result.store = categoryStore;
-                  return result;
-                },
-              },
-              {
-                path: ":id/edit",
-                element: <CategoryDetail mode="EDIT" />,
-                loader: async ({ params }) => {
-                  if (!params.id) throw Error(ERROR_CODES.PARAM_NOT_FOUND);
-                  const result = await categoryStore.getItem(params.id);
-
-                  result.store = categoryStore;
-                  return result;
-                },
-                action: async ({ request }) => {
-                  const formData = await request.formData();
-                  const data = Object.fromEntries(formData.entries());
-                  const id = data.catID as string;
-                  const category = await categoryStore.getItem(id);
-                  category.update({
-                    title: data.title as string,
-                    description: data.description as string,
-                    ownerId: data.ownerId as string,
-                  });
-                  return redirect(`/admin/categories/${id}`);
-                },
-              },
-              {
-                path: "new",
-                element: <CategoryDetail mode="NEW" />,
-                action: async ({ request }) => {
-                  const formData = await request.formData();
-                  const { title, description } = Object.fromEntries(
-                    formData
-                  ) as {
-                    title: string;
-                    description: string;
-                  };
-                  const newCategory = new Category();
-                  newCategory.title = title;
-                  newCategory.description = description;
-                  newCategory.creatorId = currentUser.id;
-                  await categoryStore.createItem(newCategory);
-
-                  return redirect(`/admin/categories/${newCategory.id}`);
-                },
-              },
-            ],
-          },
-        ],
-        loader: async () => {
-          await categoryStore.init();
-          return categoryStore;
-        },
-      },
     ],
     loader: async () => {
       const isAuth = await currentUser.isAuthenticated();
+
       if (!isAuth) return redirect("/auth/login?returnUrl=/admin");
+
+      const role = currentUser.role;
+      if (!(role === "admin")) throw Error(ERROR_CODES.UNAUTHORIZED);
       return;
     },
   },
@@ -252,11 +256,6 @@ const router = createBrowserRouter([
       return redirect(`/${returnUrl}`);
     },
   },
-  // {
-  //   path: "error",
-  //   element: <ErrorElment />,
-  //   errorElement: <ErrorPage />,
-  // },
 ]);
 function App() {
   document.title = import.meta.env.VITE_APP_TITLE;

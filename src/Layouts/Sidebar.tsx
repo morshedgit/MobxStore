@@ -28,6 +28,19 @@ export const Sidebar = observer(() => {
           </li>
           <li>
             <NavLink
+              to="/categories"
+              className={({ isActive }) => (isActive ? "underline" : "")}
+              end
+            >
+              {open ? (
+                "Categories"
+              ) : (
+                <span className="material-symbols-outlined">category</span>
+              )}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
               to="/admin"
               className={({ isActive }) => (isActive ? "underline" : "")}
             >

@@ -36,7 +36,12 @@ export interface IConsumer<T extends IConsumer<T>> {
   toJson: (consumer: T) => any;
 }
 
-export type UserRole = "admin" | "subscriber" | "anonymous";
+export type UserRole =
+  | "creator"
+  | "admin"
+  | "subscriber"
+  | "anonymous"
+  | "editor";
 
 export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
   username: string;
@@ -53,7 +58,7 @@ export interface IUser<T extends IConsumer<T>> extends IConsumer<T> {
 export interface IService<T extends IConsumer<T>> {
   create(item: T): Promise<T>;
   read(id: string): Promise<T>;
-  readAll(ids?: string[]): Promise<T[]>;
+  readAll(protectionLevel?: UserRole): Promise<T[]>;
   update(item: T): Promise<T>;
   delete(item: T): Promise<T>;
   find(query: { key: string; value: any }[]): Promise<T | undefined>;
@@ -108,9 +113,6 @@ export class Store<T extends IConsumer<T>> implements IStore<T> {
     return new Promise(async (res, rej) => {
       try {
         if (this._isReady === LOADING_STATE.READY) res(true);
-        // if (this._isReady === LOADING_STATE.ERROR) {
-        //   throw new Error(ERROR_CODES.SERVICE_ERROR);
-        // }
         const items = await this.service.readAll();
 
         this.items = items.map((item) => {
@@ -199,7 +201,7 @@ export class User implements IUser<User> {
     username: string;
     password: string;
   }): Promise<User> {
-    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    if (!this.service) throw Error(ERROR_CODES.SERVICE_ERROR);
     const user = await this.service.login(credentials);
     if (!user) {
       throw Error(ERROR_CODES.NOT_FOUND);
@@ -212,7 +214,7 @@ export class User implements IUser<User> {
     return this;
   }
   async logout(): Promise<boolean> {
-    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    if (!this.service) throw Error(ERROR_CODES.SERVICE_ERROR);
     this.authenticated = false;
     await this.service.logout();
     return true;
@@ -221,7 +223,7 @@ export class User implements IUser<User> {
     username: string;
     password: string;
   }): Promise<User> {
-    if (!this.service) throw Error(ERROR_CODES.NOT_IMPLEMENTED);
+    if (!this.service) throw Error(ERROR_CODES.SERVICE_ERROR);
     await this.service.signup(credentials);
     const newUser = new User();
     newUser.username = credentials.username;
